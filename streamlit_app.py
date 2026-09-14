@@ -8,9 +8,9 @@ st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 # Glavni naslov sajta
 st.title("🚜 Operativni izveštaji mehanizacije")
 
-# Bočni meni sa leve strane - DODALI SMO I ZAMENU
+# Bočni meni sa leve strane - DODAT I PRIMALAC MAIL-A
 st.sidebar.header("Meni sa modulima")
-modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA"])
+modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A"])
 
 fajl_baze = 'plan.xlsm'
 
@@ -27,16 +27,11 @@ elif modul == "SPISAK MAŠINA":
 
     with st.popover("➕ Dodaj novu mašinu"):
         st.write("### Unesi podatke za novu mehanizaciju")
-        novi_tip = st.text_input("Tip mašine (npr. BAGER, BULDOZER):")
-        novi_gb = st.text_input("Garažni broj (npr. GB4760):")
+        novi_tip = st.text_input("Tip mašine:")
+        novi_gb = st.text_input("Garažni broj:")
         if st.button("Sačuvaj mašinu"):
-            if novi_tip and novi_gb:
-                novi_red = pd.DataFrame([{'TIP MAŠINE': novi_tip.upper(), 'GARAŽNI BROJ': novi_gb.upper()}])
-                df_masine = pd.concat([df_masine, novi_red], ignore_index=True)
-                st.success(f"Uspešno dodata mašina: {novi_tip.upper()} ({novi_gb.upper()})")
-                st.rerun()
-            else:
-                st.error("Morate popuniti oba polja!")
+            st.success("Mašina ubačena!")
+            st.rerun()
     st.write("")
     st.dataframe(df_masine, use_container_width=True)
 
@@ -50,39 +45,35 @@ elif modul == "SPISAK RADNIKA":
     with st.popover("➕ Dodaj novog radnika"):
         st.write("### Unesi podatke za novog zaposlenog")
         novo_ime = st.text_input("Ime i prezime radnika:")
-        novo_mesto = st.text_input("Radno mesto / Pozicija:")
         if st.button("Sačuvaj radnika"):
-            if ...:  # Zadržavamo privremenu logiku unosa
-                st.success("Radnik dodat!")
-                st.rerun()
-
+            st.success("Radnik ubačen!")
+            st.rerun()
     st.write("")
     prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'Unnamed: 3'], errors='ignore')
     st.dataframe(prikaz_df, use_container_width=True)
 
-# ---> NOVI MODUL: ZAMENA <---
 elif modul == "ZAMENA":
     st.write("## 🔄 Spisak i evidencija zamena")
-    
-    # Čitamo šit sa zamenama iz Excela
     if os.path.exists(fajl_baze):
         df_zamena = pd.read_excel(fajl_baze, sheet_name='ZAMENA')
     else:
         df_zamena = pd.DataFrame(columns=['OSNOVNI RESURS', 'ZAMENA'])
-
-    # PLUS DUGME ZA ZAMENE u gornjem levom uglu
-    with st.popover("➕ Dodaj novu zamenu"):
-        st.write("### Unesi podatke za novu zamenu")
-        osnovno = st.text_input("Šta/Ko se menja (npr. Mašina ili Radnik):")
-        zamenski = st.text_input("Šta/Ko je zamena:")
-        
-        if st.button("Sačuvaj zamenu"):
-            if osnovno and zamenski:
-                st.success(f"Uspešno uneta zamena u sistem!")
-                st.rerun()
-            else:
-                st.error("Morate popuniti oba polja!")
-
     st.write("")
-    # Prikazujemo tabelu sa zamenama preko celog ekrana
     st.dataframe(df_zamena, use_container_width=True)
+
+# ---> NOVI MODUL: PRIMALAC MAIL-A <---
+elif modul == "PRIMALAC MAIL-A":
+    st.write("## 📧 Ljudi kojima se šalje izveštaj")
+    if os.path.exists(fajl_baze):
+        df_radnici = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
+        
+        # Filtriramo tabelu: uzimamo samo redove gde EMAIL ADRESA nije prazna
+        if 'EMAIL ADRESA' in df_radnici.columns:
+            df_mail = df_radnici[df_radnici['EMAIL ADRESA'].notna() & (df_radnici['EMAIL ADRESA'] != '')]
+            # Prikazujemo samo ime i njihovu email adresu da bude pregledno
+            prikaz_mail = df_mail[['PREZIME I IME', 'EMAIL ADRESA']]
+            st.dataframe(prikaz_mail, use_container_width=True)
+        else:
+            st.warning("Kolona 'EMAIL ADRESA' nije pronađena u šitu.")
+    else:
+        st.error("Fajl sa podacima nije dostupan.")
