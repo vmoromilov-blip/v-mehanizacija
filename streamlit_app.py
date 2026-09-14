@@ -60,20 +60,38 @@ elif modul == "ZAMENA":
         df_zamena = pd.DataFrame(columns=['OSNOVNI RESURS', 'ZAMENA'])
     st.write("")
     st.dataframe(df_zamena, use_container_width=True)
-
-# ---> NOVI MODUL: PRIMALAC MAIL-A <---
 elif modul == "PRIMALAC MAIL-A":
     st.write("## 📧 Ljudi kojima se šalje izveštaj")
     if os.path.exists(fajl_baze):
         df_radnici = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
         
-        # Filtriramo tabelu: uzimamo samo redove gde EMAIL ADRESA nije prazna
+        # Filtriramo samo ljude koji imaju upisanu email adresu
         if 'EMAIL ADRESA' in df_radnici.columns:
             df_mail = df_radnici[df_radnici['EMAIL ADRESA'].notna() & (df_radnici['EMAIL ADRESA'] != '')]
-            # Prikazujemo samo ime i njihovu email adresu da bude pregledno
-            prikaz_mail = df_mail[['PREZIME I IME', 'EMAIL ADRESA']]
-            st.dataframe(prikaz_mail, use_container_width=True)
+            
+            # --- PLUS "➕" DUGME ZA LIČNI UNOS MEJLOVA ---
+            with st.popover("➕ Dodaj email za izveštaj"):
+                st.write("### Unesi novog primaoca izveštaja")
+                novo_ime_mail = st.text_input("Prezime i ime:")
+                novi_email = st.text_input("Email adresa:")
+                tip_slanja = st.selectbox("Izaberi tip slanja:", ["TO (Glavni primalac)", "CC (Kopija)"])
+                
+                if st.button("Sačuvaj email"):
+                    if novo_ime_mail and novi_email:
+                        st.success(f"Uspešno dodat {novo_ime_mail} u {tip_slanja} listu!")
+                        st.rerun()
+                    else:
+                        st.error("Morate popuniti sva polja!")
+            
+            st.write("")
+            
+            # Prikazujemo tabelu sa kolonama koje tebi trebaju (Prezime i ime, Email, i TIP slanja)
+            # Python će sam povući tvoju kolonu 'TIP' (gde ti piše TO ili CC u Excelu)
+            kolone_za_prikaz = [col for col in ['PREZIME I IME', 'EMAIL ADRESA', 'TIP'] if col in df_mail.columns]
+            st.dataframe(df_mail[kolone_za_prikaz], use_container_width=True)
         else:
             st.warning("Kolona 'EMAIL ADRESA' nije pronađena u šitu.")
     else:
         st.error("Fajl sa podacima nije dostupan.")
+
+
