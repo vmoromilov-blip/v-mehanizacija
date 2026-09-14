@@ -18,8 +18,8 @@ if modul == "Početna":
 elif modul == "SPISAK MAŠINA":
     st.write("## 📋 Spisak mehanizacije")
     
-    # Učitavamo podatke iz fajla koji je pored koda
-       df = pd.read_excel('plan.xlsm', sheet_name='SPISAK MAŠINA')
+    # Učitavamo podatke iz fajla sa makroima (.xlsm)
+    df = pd.read_excel('plan.xlsm', sheet_name='SPISAK MAŠINA')
     
     # Prikazujemo čistu tabelu preko celog ekrana
     st.dataframe(df, use_container_width=True)
