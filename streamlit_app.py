@@ -72,4 +72,7 @@ elif modul == "SPISAK RADNIKA":
 
     st.write("")
     # Prikazujemo tabelu sa radnicima preko celog ekrana
-    st.dataframe(df_radnici, use_container_width=True)
+        # Sakrivamo kolonu sa email adresama i onu praznu kolonu sa ekrana
+    prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'Unnamed: 3'], errors='ignore')
+    st.dataframe(prikaz_df, use_container_width=True)
+
