@@ -72,22 +72,20 @@ elif modul == "PRIMALAC MAIL-A":
             # --- PLUS "➕" DUGME ZA LIČNI UNOS MEJLOVA ---
             with st.popover("➕ Dodaj email za izveštaj"):
                 st.write("### Unesi novog primaoca izveštaja")
-                novo_ime_mail = st.text_input("Prezime i ime:")
                 novi_email = st.text_input("Email adresa:")
-                tip_slanja = st.selectbox("Izaberi tip slanja:", ["TO (Glavni primalac)", "CC (Kopija)"])
+                tip_slanja = st.selectbox("Izaberi tip slanja:", ["TO", "CC"])
                 
                 if st.button("Sačuvaj email"):
-                    if novo_ime_mail and novi_email:
-                        st.success(f"Uspešno dodat {novo_ime_mail} u {tip_slanja} listu!")
+                    if novi_email:
+                        st.success(f"Uspešno dodat email u {tip_slanja} listu!")
                         st.rerun()
                     else:
-                        st.error("Morate popuniti sva polja!")
+                        st.error("Morate uneti email adresu!")
             
             st.write("")
             
-            # Prikazujemo tabelu sa kolonama koje tebi trebaju (Prezime i ime, Email, i TIP slanja)
-            # Python će sam povući tvoju kolonu 'TIP' (gde ti piše TO ili CC u Excelu)
-            kolone_za_prikaz = [col for col in ['PREZIME I IME', 'EMAIL ADRESA', 'TIP'] if col in df_mail.columns]
+            # Prikazujemo tabelu sa samo dve kolone: EMAIL ADRESA i TIP slanja
+            kolone_za_prikaz = [col for col in ['EMAIL ADRESA', 'TIP'] if col in df_mail.columns]
             st.dataframe(df_mail[kolone_za_prikaz], use_container_width=True)
         else:
             st.warning("Kolona 'EMAIL ADRESA' nije pronađena u šitu.")
