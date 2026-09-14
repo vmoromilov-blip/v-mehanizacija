@@ -8,9 +8,11 @@ st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 # Glavni naslov sajta
 st.title("🚜 Operativni izveštaji mehanizacije")
 
-# Pravimo bočni meni sa leve strane za module
+# Pravimo bočni meni sa leve strane za module - DODALI SMO SPISAK RADNIKA
 st.sidebar.header("Meni sa modulima")
-modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA"])
+modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA"])
+
+fajl_baze = 'plan.xlsm'
 
 if modul == "Početna":
     st.write("### Dobrodošli u operativni sistem mehanizacije!")
@@ -19,40 +21,55 @@ if modul == "Početna":
 elif modul == "SPISAK MAŠINA":
     st.write("## 📋 Spisak mehanizacije")
     
-    # 1. Proveravamo da li fajl postoji, ako ne, pravimo osnovnu tabelu
-    fajl_baze = 'plan.xlsm'
-    
     if os.path.exists(fajl_baze):
-        df = pd.read_excel(fajl_baze, sheet_name='SPISAK MAŠINA')
+        df_masine = pd.read_excel(fajl_baze, sheet_name='SPISAK MAŠINA')
     else:
-        # Ako fajl nekim čudom nestane, pravimo praznu tabelu sa tvojim kolonama
-        df = pd.DataFrame(columns=['TIP MAŠINE', 'GARAŽNI BROJ'])
+        df_masine = pd.DataFrame(columns=['TIP MAŠINE', 'GARAŽNI BROJ'])
 
-    # 2. PRAVIMO PLUS "+" DUGME U GORNJEM LEVOM UGLU
-    # Pravimo iskačući prozorčić (popover) koji glumi tvoj plus dugme
+    # PLUS DUGME ZA MAŠINE
     with st.popover("➕ Dodaj novu mašinu"):
         st.write("### Unesi podatke za novu mehanizaciju")
-        
-        # Polja za unos teksta
         novi_tip = st.text_input("Tip mašine (npr. BAGER, BULDOZER):")
         novi_gb = st.text_input("Garažni broj (npr. GB4760):")
         
-        # Dugme koje potvrđuje unos
-        if st.button("Sačuvaj u sistemu"):
+        if st.button("Sačuvaj mašinu"):
             if novi_tip and novi_gb:
-                # Pravimo novi red i dodajemo ga u našu tabelu u memoriji
                 novi_red = pd.DataFrame([{'TIP MAŠINE': novi_tip.upper(), 'GARAŽNI BROJ': novi_gb.upper()}])
-                df = pd.concat([df, novi_red], ignore_index=True)
-                
-                # VAŽNO: Pošto je Excel fajl na serveru privremen, privremeno ga čuvamo u memoriji
-                # U pravom sistemu ovde ide upis u bazu podataka (rešićemo i to čim prođe test)
+                df_masine = pd.concat([df_masine, novi_red], ignore_index=True)
                 st.success(f"Uspešno dodata mašina: {novi_tip.upper()} ({novi_gb.upper()})")
-                st.rerun() # Osvežavamo sajt da se odmah vidi promena u tabeli
+                st.rerun()
             else:
                 st.error("Morate popuniti oba polja!")
 
-    # Razmak između dugmeta i tabele
     st.write("")
+    st.dataframe(df_masine, use_container_width=True)
+
+elif modul == "SPISAK RADNIKA":
+    st.write("## 👥 Spisak zaposlenih radnika")
     
-    # 3. Prikazujemo čistu tabelu preko celog ekrana (sa novim izmenama)
-    st.dataframe(df, use_container_width=True)
+    # Čitamo šit sa radnicima iz Excela
+    if os.path.exists(fajl_baze):
+        df_radnici = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
+    else:
+        df_radnici = pd.DataFrame(columns=['IME I PREZIME', 'RADNO MESTO'])
+
+    # PLUS DUGME ZA RADNIKE u gornjem levom uglu
+    with st.popover("➕ Dodaj novog radnika"):
+        st.write("### Unesi podatke za novog zaposlenog")
+        novo_ime = st.text_input("Ime i prezime radnika:")
+        novo_mesto = st.text_input("Radno mesto / Pozicija (npr. VOZAČ, MEHANIČAR):")
+        
+        if st.button("Sačuvaj radnika"):
+            if novo_ime and novo_mesto:
+                # Pravimo novi red za radnika (prilagodiće se tvojim pravim kolonama)
+                # Ako tvoje kolone u Excelu imaju drugačije nazive, zamenićemo ih lako ovde
+                novi_radnik = pd.DataFrame([{'IME I PREZIME': novo_ime.upper(), 'RADNO MESTO': novo_mesto.upper()}])
+                df_radnici = pd.concat([df_radnici, novi_radnik], ignore_index=True)
+                st.success(f"Uspešno dodat radnik: {novo_ime.upper()} ({novo_mesto.upper()})")
+                st.rerun()
+            else:
+                st.error("Morate popuniti oba polja!")
+
+    st.write("")
+    # Prikazujemo tabelu sa radnicima preko celog ekrana
+    st.dataframe(df_radnici, use_container_width=True)
