@@ -7,6 +7,7 @@ def prikazi_ispravnost(fajl_baze):
     st.write("## 🛠️ Dnevna ispravnost mehanizacije")
     
     fajl_csv = "ispravnost_baza.csv"
+    trenutna_godina = datetime.now().strftime('%Y')
     
     if not os.path.exists(fajl_csv) or os.path.getsize(fajl_csv) == 0:
         if os.path.exists(fajl_baze):
@@ -32,15 +33,13 @@ def prikazi_ispravnost(fajl_baze):
     izabrani_mesec = st.selectbox("Izaberi mesec za prikaz:", meseci, index=trenutni_mesec_idx)
     
     mesec_broj_str = str(meseci.index(izabrani_mesec) + 1).zfill(2)
-    ekstenzija_meseca = f".{mesec_broj_str}.2026"
+    ekstenzija_meseca = f".{mesec_broj_str}.{trenutna_godina}"
     
     osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
     kalendarske_kolone = [c for c in df.columns if c.endswith(ekstenzija_meseca)]
     
-    # --- TAČNO CENTRIRANJE UNUTAR TEKUĆEG MESECA ---
     if danasnji_str in kalendarske_kolone:
         idx_danas = kalendarske_kolone.index(danasnji_str)
-        # Slažemo dane tako da ekran skoči na danas i dane posle njega, a prve dane u mesecu stavlja iza
         poredjane_kolone = osnovne_kolone + kalendarske_kolone[max(0, idx_danas-2):] + kalendarske_kolone[:max(0, idx_danas-2)]
     else:
         poredjane_kolone = osnovne_kolone + kalendarske_kolone
@@ -53,7 +52,6 @@ def prikazi_ispravnost(fajl_baze):
         naziv_zaglavlja = f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col
         konfiguracija_kolona[col] = st.column_config.SelectboxColumn(naziv_zaglavlja, options=["DA", "NE", "MIR", "VIK"], required=True)
 
-    # Čist prikaz bez ijednog gutača memorije
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
@@ -62,8 +60,6 @@ def prikazi_ispravnost(fajl_baze):
         key="editor_ispravnosti_brzi"
     )
     
-    if izmenjeni_df is not None:
-        osnovni_df = pd.DataFrame(izmenjeni_df.values, columns=df.columns)
-        if not osnovni_df.equals(df):
-            osnovni_df.to_csv(fajl_csv, index=False)
-            st.rerun()
+    if izmenjeni_df is not None and not izmenjeni_df.equals(df):
+        izmenjeni_df.to_csv(fajl_csv, index=False)
+        st.rerun()
