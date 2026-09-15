@@ -2,17 +2,11 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
-
-# UVOZIMO NAŠU NOVU FIOKU ZA ISPRAVNOST
 from ispravnost import prikazi_ispravnost
 
-# Podešavamo naslovnu stranu sajta
 st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
-
-# Glavni naslov sajta
 st.title("🚜 Operativni izveštaji mehanizacije")
 
-# Bočni meni sa leve strane
 st.sidebar.header("Meni sa modulima")
 modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A", "NOSIOCI", "ISPRAVNOST"])
 
@@ -26,36 +20,18 @@ elif modul == "SPISAK MAŠINA":
     st.write("## 📋 Spisak mehanizacije")
     if os.path.exists(fajl_baze):
         df_masine = pd.read_excel(fajl_baze, sheet_name='SPISAK MAŠINA')
+        st.dataframe(df_masine, use_container_width=True)
     else:
-        df_masine = pd.DataFrame(columns=['TIP MAŠINE', 'GARAŽNI BROJ'])
-
-    col1, col2 = st.columns()
-    with col1:
-        with st.popover("➕ Dodaj mašinu"):
-            novi_tip = st.text_input("Tip mašine:")
-            novi_gb = st.text_input("Garažni broj:")
-            if st.button("Sačuvaj mašinu"):
-                st.success("Mašina ubačena!")
-                st.rerun()
-    st.data_editor(df_masine, use_container_width=True, num_rows="dynamic", key="editor_masine")
+        st.error("Fajl nije pronađen.")
 
 elif modul == "SPISAK RADNIKA":
     st.write("## 👥 Spisak zaposlenih radnika")
     if os.path.exists(fajl_baze):
         df_radnici = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
+        prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
+        st.dataframe(prikaz_df, use_container_width=True)
     else:
-        df_radnici = pd.DataFrame(columns=['SAP BROJ', 'PREZIME I IME', 'STATUS'])
-
-    prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
-
-    col1, col2 = st.columns()
-    with col1:
-        with st.popover("➕ Dodaj radnika"):
-            novo_ime = st.text_input("Ime i prezime radnika:")
-            if st.button("Sačuvaj radnika"):
-                st.success("Radnik ubačen!")
-                st.rerun()
-    st.data_editor(prikaz_df, use_container_width=True, num_rows="dynamic", key="editor_radnici")
+        st.error("Fajl nije pronađen.")
 
 elif modul == "ZAMENA":
     st.write("## 🔄 Spisak i evidencija zamena")
@@ -66,9 +42,7 @@ elif modul == "ZAMENA":
             df_zamena['DATUM POČETKA'] = pd.to_datetime(df_zamena['DATUM POČETKA']).dt.date
         if 'DATUM ZAVRŠETKA' in df_zamena.columns:
             df_zamena['DATUM ZAVRŠETKA'] = pd.to_datetime(df_zamena['DATUM ZAVRŠETKA']).dt.date
-    else:
-        df_zamena = pd.DataFrame(columns=['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'ZAMENA'])
-    st.data_editor(df_zamena, use_container_width=True, num_rows="dynamic", key="editor_zamena")
+        st.dataframe(df_zamena, use_container_width=True)
 
 elif modul == "PRIMALAC MAIL-A":
     st.write("## 📧 Ljudi kojima se šalje izveštaj")
@@ -77,7 +51,7 @@ elif modul == "PRIMALAC MAIL-A":
         if 'EMAIL ADRESA' in df_radnici.columns:
             df_mail = df_radnici[df_radnici['EMAIL ADRESA'].notna() & (df_radnici['EMAIL ADRESA'] != '')]
             kolone_za_prikaz = [col for col in ['EMAIL ADRESA', 'TIP'] if col in df_mail.columns]
-            st.data_editor(df_mail[kolone_za_prikaz], use_container_width=True, num_rows="dynamic", key="editor_mail")
+            st.dataframe(df_mail[kolone_za_prikaz], use_container_width=True)
 
 elif modul == "NOSIOCI":
     st.write("## 🔑 Zaduženja mehanizacije - Nosioci")
@@ -86,10 +60,7 @@ elif modul == "NOSIOCI":
         df_nosioci = df_nosioci.rename(columns={'START DATUM': 'DATUM POČETKA'})
         if 'DATUM POČETKA' in df_nosioci.columns:
             df_nosioci['DATUM POČETKA'] = pd.to_datetime(df_nosioci['DATUM POČETKA']).dt.date
-    else:
-        df_nosioci = pd.DataFrame(columns=['ID MAŠINE', 'TIP TURNUSA', 'DATUM POČETKA', 'SMENA', 'SAP BROJ', 'NOSILAC'])
-    st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
+        st.dataframe(df_nosioci, use_container_width=True)
 
-# KADA NEKO KLIKNE NA ISPRAVNOST, SAJT SAMO OTVORI NOVU FIOKU KOJU SMO NAPRAVILI
 elif modul == "ISPRAVNOST":
     prikazi_ispravnost(fajl_baze)
