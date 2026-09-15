@@ -26,7 +26,6 @@ def prikazi_ispravnost(fajl_baze):
     df = df.fillna('DA')
     danasnji_str = datetime.now().strftime('%d.%m.%Y')
     
-    # --- PADAJUĆI MENI ZA IZBOR MESECA (UBRZANJE!) ---
     st.write("### 📅 Filter kalendara")
     meseci = ["Januar", "Februar", "Mart", "April", "Maj", "Jun", "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar"]
     trenutni_mesec_idx = datetime.now().month - 1
@@ -37,9 +36,15 @@ def prikazi_ispravnost(fajl_baze):
     
     osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
     kalendarske_kolone = [c for c in df.columns if c.endswith(ekstenzija_meseca)]
-    prikazane_kolone = osnovne_kolone + kalendarske_kolone
+    
+    # --- TAČNO CENTRIRANJE UNUTAR TEKUĆEG MESECA ---
+    if danasnji_str in kalendarske_kolone:
+        idx_danas = kalendarske_kolone.index(danasnji_str)
+        # Slažemo dane tako da ekran skoči na danas i dane posle njega, a prve dane u mesecu stavlja iza
+        poredjane_kolone = osnovne_kolone + kalendarske_kolone[max(0, idx_danas-2):] + kalendarske_kolone[:max(0, idx_danas-2)]
+    else:
+        poredjane_kolone = osnovne_kolone + kalendarske_kolone
 
-    # --- PADAJUĆI MENIJI U ĆELIJAMA ---
     konfiguracija_kolona = {
         "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True, disabled=True),
         "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True, disabled=True)
@@ -48,26 +53,16 @@ def prikazi_ispravnost(fajl_baze):
         naziv_zaglavlja = f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col
         konfiguracija_kolona[col] = st.column_config.SelectboxColumn(naziv_zaglavlja, options=["DA", "NE", "MIR", "VIK"], required=True)
 
-    # --- VRATILI SMO SVE BOJE! ---
-    def oboji_status(val):
-        if val == 'NE': return 'background-color: #ffcccc; color: black; font-weight: bold;'
-        elif val == 'MIR': return 'background-color: #fff2cc; color: black;'
-        elif val == 'VIK': return 'background-color: #d9ead3; color: black;'
-        elif val == 'DA': return 'background-color: #ffffff; color: green; font-weight: bold;'
-        return ''
-        
-    styled_df = df.style.map(oboji_status)
-
+    # Čist prikaz bez ijednog gutača memorije
     izmenjeni_df = st.data_editor(
-        styled_df,
+        df,
         use_container_width=True,
-        column_order=prikazane_kolone,
+        column_order=poredjane_kolone,
         column_config=konfiguracija_kolona,
         key="editor_ispravnosti_brzi"
     )
     
     if izmenjeni_df is not None:
-        # Čuvamo promenu u pozadini
         osnovni_df = pd.DataFrame(izmenjeni_df.values, columns=df.columns)
         if not osnovni_df.equals(df):
             osnovni_df.to_csv(fajl_csv, index=False)
