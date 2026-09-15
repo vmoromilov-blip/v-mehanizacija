@@ -16,8 +16,6 @@ def prikazi_ispravnost(fajl_baze):
     
     if os.path.exists(fajl_csv):
         df = pd.read_csv(fajl_csv)
-        
-        # Svi prazni dani (None/NaN) se automatski popunjavaju sa "DA" da ne kvare tabelu
         df = df.fillna('DA')
         
         # --- AUTOMATSKO DODAVANJE NOVIH MAŠINA SA PLUSIĆA ---
@@ -39,7 +37,6 @@ def prikazi_ispravnost(fajl_baze):
 
         danasnji_str = datetime.now().strftime('%d.%m.%Y')
         
-        # --- ŽIVI UNOS: PROZORČIĆ KOJI PRENOSI STANJE NA NAREDNE DANE ---
         with st.popover("⚙️ Promeni status mašine"):
             st.write("### Unesi promenu statusa u kalendar")
             izabrana_masina = st.selectbox("Izaberi mašinu (ID):", df['ID MAŠINE'].dropna().unique())
@@ -67,42 +64,39 @@ def prikazi_ispravnost(fajl_baze):
                     st.error(f"Izabrani datum {datum_promene_str} se ne nalazi u kalendaru.")
         st.write("")
         
-        # Funkcija za boje
         def oboji_status(val):
             if val == 'NE': return 'background-color: #ffcccc; color: black; font-weight: bold;'
             elif val == 'MIR': return 'background-color: #fff2cc; color: black;'
             elif val == 'VIK': return 'background-color: #d9ead3; color: black;'
-            elif val == 'DA': return 'background-color: #ffffff; color: green; font-weight: bold;'
+            elif val == 'DA': return 'background-color: #ffffff; color: green;'
             return ''
         
-        # Funkcija za boldovanje današnjeg dana
-        def istakni_danasnji_dan(s):
+        # Osenčićemo blago današnju kolonu u tabeli da se lakše uoči, ali BEZ boldovanja teksta unutar ćelija
+        def osenci_danasnji_dan(s):
             if s.name == danasnji_str:
-                return ['font-weight: bold; background-color: #e6f2ff; border: 2px solid blue; color: black;'] * len(s)
+                return ['background-color: #f2f7ff; border-left: 1px solid #adcaff; border-right: 1px solid #adcaff;'] * len(s)
             return [''] * len(s)
             
-        styled_df = df.style.map(oboji_status).apply(istakni_danasnji_dan, axis=0)
+        styled_df = df.style.map(oboji_status).apply(osenci_danasnji_dan, axis=0)
         
-        sve_kolone = list(df.columns)
-        osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
+        # VRATILI SMO SVE KOLONE (VRAĆEN KLIZAČ ULEVO I UDESNO ZA CELU GODINU!)
+        prikazane_kolone = list(df.columns)
         
-        if danasnji_str in sve_kolone:
-            idx = sve_kolone.index(danasnji_str)
-            pocetak = max(2, idx - 2)
-            kraj = min(len(sve_kolone), idx + 6)
-            prikazane_kolone = osnovne_kolone + sve_kolone[pocetak:kraj]
-        else:
-            prikazane_kolone = osnovne_kolone + [c for c in sve_kolone if c not in osnovne_kolone][:8]
-            
-        # Vraćamo st.dataframe format koji podržava napredne stilove i boje
+        # Formiramo konfiguraciju gde BOLDUJEMO samo naslov današnjeg datuma u zaglavlju (gornja linija)
+        konfiguracija_kolona = {
+            "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True),
+            "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True)
+        }
+        
+        # Ako je današnji dan u tabeli, stavljamo mu velika masna slova u naslovu i zvezdice
+        if danasnji_str in prikazane_kolone:
+            konfiguracija_kolona[danasnji_str] = st.column_config.TextColumn(f"🚨 {danasnji_str} (DANAS) 🚨")
+
         st.dataframe(
             styled_df,
             use_container_width=True,
             column_order=prikazane_kolone,
-            column_config={
-                "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True),
-                "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True)
-            }
+            column_config=konfiguracija_kolona
         )
     else:
         st.error("Baza podataka nije dostupna.")
