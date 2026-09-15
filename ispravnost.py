@@ -70,17 +70,8 @@ def prikazi_ispravnost(fajl_baze):
                     st.rerun()
     st.write("")
     
-    # --- AUTOMATSKO CENTRIRANJE EKRAZA OKO DANAŠNJEG DANA ---
-    sve_kolone = list(df.columns)
-    osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
-    
-    # Tražimo gde se u tabeli nalazi današnji dan i krojimo optimalan redosled prikaza
-    if danasnji_str in sve_kolone:
-        idx = sve_kolone.index(danasnji_str)
-        # Uzimamo 2 dana pre (istorija) i sve preostale dane do kraja godine udesno
-        prikazane_kolone = osnovne_kolone + sve_kolone[idx-2:]
-    else:
-        prikazane_kolone = sve_kolone
+    # --- VRAĆAMO SVE KOLONE OD 1. JANUARA ZA POTPUNU ISTORIJU ---
+    prikazane_kolone = list(df.columns)
 
     # --- KONFIGURACIJA TABELE SA PADAJUĆIM MENIJIMA ---
     konfiguracija_kolona = {
@@ -103,7 +94,7 @@ def prikazi_ispravnost(fajl_baze):
                     required=True
                 )
 
-    # Pokrećemo čisti i maksimalno stabilni data_editor sa fokusom na danas
+    # Pokrećemo čisti data_editor sa celom istorijom i klizačem unazad
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
