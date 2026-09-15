@@ -10,9 +10,22 @@ def prikazi_ispravnost(fajl_baze):
         df = pd.read_excel(fajl_baze, sheet_name='ISPRAVNOST')
         df = df.rename(columns={'MAŠINA / DATUM': 'MAŠINA'})
         
-        # Svi datumi u kolonama moraju biti tekstualni da se sajt ne bi rušio
+        # --- AUTOMATSKO DODAVANJE NOVIH MAŠINA SA PLUSIĆA ---
+        if os.path.exists('spisak_mašina.csv'):
+            df_zive_masine = pd.read_csv('spisak_mašina.csv')
+            for _, red in df_zive_masine.iterrows():
+                gb = red['GARAŽNI BROJ']
+                tip = red['TIP MAŠINE']
+                if gb not in df['ID MAŠINE'].values:
+                    # Pravimo novi red za novu mašinu i punimo kalendar sa "DA"
+                    novi_red = {'MAŠINA': tip, 'ID MAŠINE': gb}
+                    for col in df.columns:
+                        if col not in ['MAŠINA', 'ID MAŠINE']:
+                            novi_red[col] = 'DA'
+                    df = pd.concat([df, pd.DataFrame([novi_red])], ignore_index=True)
+        # ----------------------------------------------------
+
         df.columns = [col.strftime('%d.%m.%Y') if isinstance(col, datetime) else str(col) for col in df.columns]
-        
         danasnji_str = datetime.now().strftime('%d.%m.%Y')
         
         with st.popover("⚙️ Promeni status mašine"):
@@ -38,7 +51,6 @@ def prikazi_ispravnost(fajl_baze):
             
         styled_df = df.style.map(oboji_status).apply(istakni_danasnji_dan, axis=0)
         
-        # Pametno centriranje kolona oko današnjeg dana
         sve_kolone = list(df.columns)
         osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
         
