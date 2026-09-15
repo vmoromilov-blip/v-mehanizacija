@@ -11,7 +11,8 @@ st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 st.title("🚜 Operativni izveštaji mehanizacije")
 
 st.sidebar.header("Meni sa modulima")
-modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A", "NOSIOCI", "ISPRAVNOST", "DNEVNI RASPORED"])
+# PROMENJENO IME U MENIJU: UMESTO "DNEVNI RASPORED" SADA PIŠE "RASPORED"
+modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A", "NOSIOCI", "ISPRAVNOST", "RASPORED"])
 
 fajl_baze = 'plan.xlsm'
 
@@ -68,6 +69,6 @@ elif modul == "NOSIOCI":
 elif modul == "ISPRAVNOST":
     prikazi_ispravnost(fajl_baze)
 
-# KADA NEKO KLIKNE NA DNEVNI RASPORED, OTVARA SE NOVA FIOKA RASPORED
-elif modul == "DNEVNI RASPORED":
+# KADA SE KLIKNE NA RASPORED, OTVARA SE FIOKA ZA RASPORED
+elif modul == "RASPORED":
     prikazi_raspored(fajl_baze)
