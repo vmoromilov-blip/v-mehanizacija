@@ -12,14 +12,24 @@ def prikazi_raspored(fajl_baze):
     fajl_csv = "raspored_baza.csv"
     danasnji_str = datetime.now().strftime('%d.%m.%Y')
     
-    # Ako baza u fascikli još ne postoji, pravimo je inicijalno iz Excela
+    # --- PRISILNO ČIŠĆENJE AKO JE PRETHODNA BAZA POVUKLA POGREŠNE STATUSNA SLOVA (DA/NE/MIR) ---
+    if os.path.exists(fajl_csv):
+        try:
+            df_provera = pd.read_csv(fajl_csv)
+            # Ako u proveri nađemo previše reči 'DA' tamo gde treba da budu imena, brišemo fajl da ga sistem ponovo izgradi tačno
+            if 'DA' in df_provera.values:
+                os.remove(fajl_csv)
+        except:
+            pass
+
+    # Ako baza u fascikli ne postoji, pravimo je inicijalno i punimo tačnim imenima
     if not os.path.exists(fajl_csv) or os.path.getsize(fajl_csv) == 0:
         if os.path.exists(fajl_baze):
             df = pd.read_excel(fajl_baze, sheet_name='RASPORED')
             df = df.rename(columns={'MAŠINA / DATUM': 'MAŠINA'})
             df.columns = [col.strftime('%d.%m.%Y') if isinstance(col, datetime) else str(col) for col in df.columns]
             
-            # 1. Prvo punimo tabelu osnovnim nosiocima iz turnusa
+            # 1. Prvo punimo tabelu osnovnim nosiocima (IMENIMA) iz turnusa
             for col in df.columns:
                 if col not in ['MAŠINA', 'ID MAŠINE']:
                     nosioci_za_dan = izracunaj_aktivnog_nosioca(fajl_baze, col)
@@ -28,7 +38,7 @@ def prikazi_raspored(fajl_baze):
                         if masina_id in nosioci_za_dan:
                             df.at[idx, col] = nosioci_za_dan[masina_id]
                             
-            # 2. Prebrisavamo nosioce izričitim naredbama iz ZAMENA
+            # 2. Prebrisavamo nosioce izričitim naredbama iz ZAMENA (IMENIMA)
             if os.path.exists('zamena.csv'):
                 try:
                     df_zamene = pd.read_csv('zamena.csv')
@@ -78,7 +88,7 @@ def prikazi_raspored(fajl_baze):
                 df = pd.concat([df, pd.DataFrame([novi_red])], ignore_index=True)
         df.to_csv(fajl_csv, index=False)
 
-    # --- 🧮 AUTOMATSKO ODUZIMANJE NA OSNOVU ISPRAVNOSTI (POPRAVLJENO SADA) ---
+    # --- 🧮 POPRAVLJENA LOGIKA AUTOMATSKOG PRAŽNJENJA ĆELIJA NA OSNOVU ISPRAVNOSTI ---
     if os.path.exists('ispravnost_baza.csv'):
         try:
             df_isp = pd.read_csv('ispravnost_baza.csv')
@@ -90,8 +100,9 @@ def prikazi_raspored(fajl_baze):
                         m_id = str(red['ID MAŠINE']).strip()
                         status_red = df_isp[df_isp['ID MAŠINE'] == m_id]
                         if not status_red.empty:
-                            # Čitamo status preko tačnog imena kolone (datuma)
+                            # HIRURŠKI PRECIZNO: Čitamo samo vrednost iz te ćelije
                             trenutni_status = str(status_red[col].values[0]).strip().upper()
+                            # Ako mašina ima kvar, mirovanje ili je vikend, brišemo vozača iz rasporeda da polje ostane PRAZNO
                             if trenutni_status in ['NE', 'MIR', 'VIK']:
                                 df.at[idx, col] = ''
         except:
@@ -109,7 +120,7 @@ def prikazi_raspored(fajl_baze):
 
     prikazane_kolone = list(df.columns)
 
-    # --- KONFIGURACIJA TABELE SA PADAJUĆIM MENIJIMA RADNIKA ---
+    # --- KONFIGURACIJA TABELE SA PADAJUĆIM MENIJIMA ---
     konfiguracija_kolona = {
         "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True, disabled=True),
         "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True, disabled=True)
@@ -125,7 +136,7 @@ def prikazi_raspored(fajl_baze):
             else:
                 konfiguracija_kolona[col] = st.column_config.TextColumn(f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col)
 
-    # Pokrećemo čisti data_editor sa celom istorijom od 1.1.2026. i klizačem
+    # Pokrećemo čisti data_editor za Raspored od 1. januara sa kompletnim klizačem
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
