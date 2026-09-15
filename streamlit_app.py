@@ -52,7 +52,8 @@ elif modul == "SPISAK MAŠINA":
                     st.success("Mašina upisana!")
                     st.rerun()
     with col2:
-        st.info("Štiklirajte kućicu levo i pritisnite ikonicu kante u tabeli za brisanje.")
+        if st.button("🗑️ Obriši selektovane mašine"):
+            st.info("Štiklirajte redove levo u tabeli i pritisnite ikonicu kante u tabeli ispod.")
     st.write("")
     edited_df = st.data_editor(df_masine, use_container_width=True, num_rows="dynamic", key="editor_masine")
     if edited_df is not None and not edited_df.equals(df_masine):
@@ -62,8 +63,12 @@ elif modul == "SPISAK MAŠINA":
 elif modul == "SPISAK RADNIKA":
     st.write("## 👥 Spisak zaposlenih radnika")
     df_radnici = ucitaj_ili_napravi_bazu('SPISAK RADNIKA', ['SAP BROJ', 'PREZIME I IME', 'STATUS'])
+    
+    # Čistimo višak kolona ako se baza prvi put pravi iz Excela
     if 'EMAIL ADRESA' in df_radnici.columns:
         df_radnici = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
+
+    # DODAJEMO PLUS I MINUS IZNAD TABELE RADNIKA
     col1, col2 = st.columns(2)
     with col1:
         with st.popover("➕ Dodaj radnika"):
@@ -76,7 +81,12 @@ elif modul == "SPISAK RADNIKA":
                     sacuvaj_bazu(df_radnici, 'SPISAK RADNIKA')
                     st.success("Radnik upisan!")
                     st.rerun()
+    with col2:
+        if st.button("🗑️ Obriši selektovane radnike"):
+            st.info("Štiklirajte kućicu levo pored radnika (ili praznih redova) i upotrebite ikonicu kante u tabeli ispod.")
+
     st.write("")
+    # Vraćamo data_editor sa kućicama za brisanje
     edited_df = st.data_editor(df_radnici, use_container_width=True, num_rows="dynamic", key="editor_radnici")
     if edited_df is not None and not edited_df.equals(df_radnici):
         sacuvaj_bazu(edited_df, 'SPISAK RADNIKA')
@@ -87,7 +97,6 @@ elif modul == "ZAMENA":
     df_zamena = ucitaj_ili_napravi_bazu('ZAMENA', ['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'ZAMENA'])
     df_zamena = df_zamena.rename(columns={'START DATUM': 'DATUM POČETKA', 'END DATUM': 'DATUM ZAVRŠETKA'})
     
-    # Čistimo sate i nule iz datuma u koloni
     for col in ['DATUM POČETKA', 'DATUM ZAVRŠETKA']:
         if col in df_zamena.columns:
             df_zamena[col] = pd.to_datetime(df_zamena[col]).dt.date
@@ -102,7 +111,6 @@ elif modul == "ZAMENA":
             z_pocetak = st.date_input("Datum početka:")
             z_zavrsetak = st.date_input("Datum završetka:")
             z_zamena = st.text_input("Ko je zamena:")
-            
             if st.button("Sačuvaj zamenu"):
                 novi_red = pd.DataFrame([{
                     'ID MAŠINE': z_id.upper(), 'SMENA': z_smena.upper(),
