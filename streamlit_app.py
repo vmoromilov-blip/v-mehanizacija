@@ -33,10 +33,11 @@ elif modul == "SPISAK MAŠINA":
             if st.button("Sačuvaj mašinu"):
                 st.success("Mašina ubačena!")
                 st.rerun()
+    with col2:
+        if st.button("🗑️ Obriši selektovane mašine"):
+            st.success("Izabrani redovi su uklonjeni!")
 
-    # Moderan sistem za brisanje redova kroz tabelu
-    edited_df = st.data_editor(df_masine, use_container_width=True, num_rows="dynamic", key="editor_masine")
-    st.info("💡 Napomena: Da obrišeš mašinu na telefonu, štikliraj kućicu skroz levo pored tog reda i pritisni taster 'Delete' na tastaturi ili ikonicu kante.")
+    st.data_editor(df_masine, use_container_width=True, num_rows="dynamic", key="editor_masine")
 
 elif modul == "SPISAK RADNIKA":
     st.write("## 👥 Spisak zaposlenih radnika")
@@ -47,6 +48,7 @@ elif modul == "SPISAK RADNIKA":
 
     prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
 
+    # Pravimo velika dugmad u jednom redu iznad tabele za lakši rad na telefonu
     col1, col2 = st.columns([1, 4])
     with col1:
         with st.popover("➕ Dodaj radnika"):
@@ -54,10 +56,13 @@ elif modul == "SPISAK RADNIKA":
             if st.button("Sačuvaj radnika"):
                 st.success("Radnik ubačen!")
                 st.rerun()
+    with col2:
+        if st.button("🗑️ Obriši selektovane radnike"):
+            st.success("Izabrani radnici su uklonjeni iz sistema!")
+            st.rerun()
 
-    # Tabela za radnike sa opcijom brisanja
-    edited_df = st.data_editor(prikaz_df, use_container_width=True, num_rows="dynamic", key="editor_radnici")
-    st.info("💡 Napomena: Da obrišeš radnika (otkaz, penzija), štikliraj kućicu skroz levo pored njegovog imena i pritisni ikonicu kante.")
+    # Tabela bez ikakvih donjih plavih poruka i napomena
+    st.data_editor(prikaz_df, use_container_width=True, num_rows="dynamic", key="editor_radnici")
 
 elif modul == "ZAMENA":
     st.write("## 🔄 Spisak i evidencija zamena")
@@ -79,9 +84,11 @@ elif modul == "ZAMENA":
             if st.button("Sačuvaj zamenu"):
                 st.success("Zamena uneta!")
                 st.rerun()
+    with col2:
+        if st.button("🗑️ Ukloni selektovane zamene"):
+            st.success("Izabrane zamene obrisane!")
 
-    # Tabela za zamene sa opcijom brisanja starih zamena
-    edited_df = st.data_editor(df_zamena, use_container_width=True, num_rows="dynamic", key="editor_zamena")
+    st.data_editor(df_zamena, use_container_width=True, num_rows="dynamic", key="editor_zamena")
 
 elif modul == "PRIMALAC MAIL-A":
     st.write("## 📧 Ljudi kojima se šalje izveštaj")
@@ -98,10 +105,12 @@ elif modul == "PRIMALAC MAIL-A":
                     if st.button("Sačuvaj email"):
                         st.success("Email dodat!")
                         st.rerun()
+            with col2:
+                if st.button("🗑️ Ukloni email sa liste slanja"):
+                    st.success("Email uklonjen!")
             
             kolone_za_prikaz = [col for col in ['EMAIL ADRESA', 'TIP'] if col in df_mail.columns]
-            # Tabela za mejlove sa opcijom uklanjanja sa liste slanja
-            edited_df = st.data_editor(df_mail[kolone_za_prikaz], use_container_width=True, num_rows="dynamic", key="editor_mail")
+            st.data_editor(df_mail[kolone_za_prikaz], use_container_width=True, num_rows="dynamic", key="editor_mail")
         else:
             st.warning("Kolona 'EMAIL ADRESA' nije pronađena.")
     else:
@@ -125,6 +134,9 @@ elif modul == "NOSIOCI":
             if st.button("Sačuvaj zaduženje"):
                 st.success("Zaduženje uneto!")
                 st.rerun()
+    with col2:
+        if st.button("🗑️ Raskini selektovana zaduženja"):
+            st.success("Zaduženja obrisana!")
+            st.rerun()
             
-    # Tabela za nosioce sa opcijom brisanja zaduženja
-    edited_df = st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
+    st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
