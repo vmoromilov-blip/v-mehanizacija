@@ -37,66 +37,74 @@ def prikazi_ispravnost(fajl_baze):
 
         danasnji_str = datetime.now().strftime('%d.%m.%Y')
         
-        with st.popover("⚙️ Promeni status mašine"):
-            st.write("### Unesi promenu statusa u kalendar")
+        # Vraćamo formu za grupni prenos stanja ako ti zatreba za više dana odjednom
+        with st.popover("⚙️ Grupna promena (Prenos na više dana)"):
+            st.write("### Unesi status i prenesi ga do kraja godine")
             izabrana_masina = st.selectbox("Izaberi mašinu (ID):", df['ID MAŠINE'].dropna().unique())
-            datum_promene = st.date_input("Izaberi datum za izmenu:", datetime.now().date())
+            datum_promene = st.date_input("Izaberi datum:", datetime.now().date())
             datum_promene_str = datum_promene.strftime('%d.%m.%Y')
-            novi_status = st.radio("Novi status:", ["DA", "NE", "MIR", "VIK"], horizontal=True)
-            prenesi_dalje = st.checkbox("Prenesi ovaj status na sve naredne dane u godini", value=True)
+            novi_status = st.radio("Status:", ["DA", "NE", "MIR", "VIK"], horizontal=True)
             
-            if st.button("Sačuvaj promenu trajno"):
+            if st.button("Sačuvaj i prenesi do kraja godine"):
                 if datum_promene_str in df.columns:
                     idx = df[df['ID MAŠINE'].astype(str).str.strip() == str(izabrana_masina).strip()].index
                     if not idx.empty:
-                        if prenesi_dalje:
-                            sve_kolone = list(df.columns)
-                            start_idx = sve_kolone.index(datum_promene_str)
-                            for c in sve_kolone[start_idx:]:
-                                df.loc[idx, c] = novi_status
-                        else:
-                            df.loc[idx, datum_promene_str] = novi_status
-                        
+                        sve_kolone = list(df.columns)
+                        start_idx = sve_kolone.index(datum_promene_str)
+                        for c in sve_kolone[start_idx:]:
+                            df.loc[idx, c] = novi_status
                         df.to_csv(fajl_csv, index=False)
-                        st.success(f"Status trajno zabeležen u fascikli kalendara!")
+                        st.success("Status uspešno prenet!")
                         st.rerun()
-                else:
-                    st.error(f"Izabrani datum {datum_promene_str} se ne nalazi u kalendaru.")
         st.write("")
         
+        # --- KONFIGURACIJA TABELE SA PADAJUĆIM MENIJIMA I BOJAMA ---
+        prikazane_kolone = list(df.columns)
+        
+        konfiguracija_kolona = {
+            "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True, disabled=True),
+            "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True, disabled=True)
+        }
+        
+        # Svaku kalendarsku kolonu pretvaramo u padajući meni (Selectbox) sa opcijama DA, NE, MIR, VIK
+        for col in prikazane_kolone:
+            if col not in ["MAŠINA", "ID MAŠINE"]:
+                if col == danasnji_str:
+                    konfiguracija_kolona[col] = st.column_config.SelectboxColumn(
+                        f"🚨 {col} (DANAS) 🚨",
+                        options=["DA", "NE", "MIR", "VIK"],
+                        required=True
+                    )
+                else:
+                    konfiguracija_kolona[col] = st.column_config.SelectboxColumn(
+                        col,
+                        options=["DA", "NE", "MIR", "VIK"],
+                        required=True
+                    )
+
+        # Funkcija za automatsko bojenje ćelija koja radi unutar data_editor-a
         def oboji_status(val):
             if val == 'NE': return 'background-color: #ffcccc; color: black; font-weight: bold;'
             elif val == 'MIR': return 'background-color: #fff2cc; color: black;'
             elif val == 'VIK': return 'background-color: #d9ead3; color: black;'
-            elif val == 'DA': return 'background-color: #ffffff; color: green;'
+            elif val == 'DA': return 'background-color: #ffffff; color: green; font-weight: bold;'
             return ''
-        
-        # Osenčićemo blago današnju kolonu u tabeli da se lakše uoči, ali BEZ boldovanja teksta unutar ćelija
-        def osenci_danasnji_dan(s):
-            if s.name == danasnji_str:
-                return ['background-color: #f2f7ff; border-left: 1px solid #adcaff; border-right: 1px solid #adcaff;'] * len(s)
-            return [''] * len(s)
             
-        styled_df = df.style.map(oboji_status).apply(osenci_danasnji_dan, axis=0)
-        
-        # VRATILI SMO SVE KOLONE (VRAĆEN KLIZAČ ULEVO I UDESNO ZA CELU GODINU!)
-        prikazane_kolone = list(df.columns)
-        
-        # Formiramo konfiguraciju gde BOLDUJEMO samo naslov današnjeg datuma u zaglavlju (gornja linija)
-        konfiguracija_kolona = {
-            "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True),
-            "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True)
-        }
-        
-        # Ako je današnji dan u tabeli, stavljamo mu velika masna slova u naslovu i zvezdice
-        if danasnji_str in prikazane_kolone:
-            konfiguracija_kolona[danasnji_str] = st.column_config.TextColumn(f"🚨 {danasnji_str} (DANAS) 🚨")
+        styled_df = df.style.map(oboji_status)
 
-        st.dataframe(
+        # Pokrećemo moćni editor sa uključenim padajućim menijima
+        izmenjeni_df = st.data_editor(
             styled_df,
             use_container_width=True,
             column_order=prikazane_kolone,
-            column_config=konfiguracija_kolona
+            column_config=konfiguracija_kolona,
+            key="zivi_editor_ispravnosti"
         )
+        
+        # Ako dvoklikom promeniš status u ćeliji, sajt to odmah trajno beleži u pozadini
+        if izmenjeni_df is not None and not izmenjeni_df.equals(df):
+            izmenjeni_df.to_csv(fajl_csv, index=False)
+            st.rerun()
+            
     else:
         st.error("Baza podataka nije dostupna.")
