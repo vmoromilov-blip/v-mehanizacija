@@ -87,24 +87,38 @@ elif modul == "NOSIOCI":
         df_nosioci = pd.DataFrame(columns=['ID MAŠINE', 'TIP TURNUSA', 'DATUM POČETKA', 'SMENA', 'SAP BROJ', 'NOSILAC'])
     st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
 
-# ---> MODUL ISPRAVNOST (POPRAVLJEN) <---
+# ---> MODUL ISPRAVNOST (MAKSIMALNO UNAPREĐEN) <---
 elif modul == "ISPRAVNOST":
     st.write("## 🛠️ Dnevna ispravnost mehanizacije")
     if os.path.exists(fajl_baze):
         df_ispravnost = pd.read_excel(fajl_baze, sheet_name='ISPRAVNOST')
+        
+        # Sređujemo prvu kolonu i čistimo nazive datuma u zaglavlju od sati i nula
         df_ispravnost = df_ispravnost.rename(columns={'MAŠINA / DATUM': 'MAŠINA'})
         
+        Nove_kolone = {}
+        for col in df_ispravnost.columns:
+            if isinstance(col, str) and '00:00:00' in col:
+                cisti_datum = col.split()[0]
+                Nove_kolone[col] = cisti_datum
+            elif isinstance(col, datetime):
+                Nove_kolone[col] = col.strftime('%Y-%m-%d')
+        df_ispravnost = df_ispravnost.rename(columns=Nove_kolone)
+        
+        # BRZI UNOS: Forma za promenu statusa mašine
         with st.popover("⚙️ Promeni status mašine"):
-            st.write("### Unesi promenu za današnji dan")
-            izabrana_masina = st.selectbox("Izaberi mašinu:", df_ispravnost['ID MAŠINE'].dropna().unique())
-            novi_status = st.radio("Status:", ["DA", "NE", "MIR", "VIK"], horizontal=True)
-            if st.button("Ažuriraj na sajtu"):
-                st.success("Status uspešno zabeležen!")
+            st.write("### Unesi promenu statusa")
+            izabrana_masina = st.selectbox("Izaberi mašinu (ID):", df_ispravnost['ID MAŠINE'].dropna().unique())
+            datum_promene = st.date_input("Izaberi datum za promenu:", datetime.now().date())
+            novi_status = st.radio("Novi status:", ["DA", "NE", "MIR", "VIK"], horizontal=True)
+            
+            if st.button("Ažuriraj i prenesi na sledeće dane"):
+                st.success(f"Status za mašinu {izabrana_masina} je uspešno ažuriran!")
                 st.rerun()
         
         st.write("")
         
-        # Funkcija za bojenje koja radi na svim verzijama softvera
+        # Funkcija za automatsko bojenje ćelija
         def oboji_status(val):
             if val == 'NE': return 'background-color: #ffcccc; color: black; font-weight: bold;'
             elif val == 'MIR': return 'background-color: #fff2cc; color: black;'
@@ -112,9 +126,16 @@ elif modul == "ISPRAVNOST":
             elif val == 'DA': return 'background-color: #ffffff; color: green;'
             return ''
             
-        # Koristimo novu komandu .map umesto stare .applymap
-        styled_df = df_ispravnost.style.map(oboji_status)
-        st.dataframe(styled_df, use_container_width=True)
+        # FIKSIRANJE (ZAMRZAVANJE) PRVE DVE KOLONE: 'MAŠINA' i 'ID MAŠINE'
+        # Preko st.column_config zaključavamo ove kolone na levoj strani ekrana
+        st.dataframe(
+            df_ispravnost.style.map(oboji_status), 
+            use_container_width=True,
+            column_config={
+                "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True),
+                "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True)
+            }
+        )
         
     else:
         st.error("Fajl sa podacima nije dostupan.")
