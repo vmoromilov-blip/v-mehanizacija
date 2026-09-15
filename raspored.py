@@ -12,10 +12,16 @@ def prikazi_raspored(fajl_baze):
         df = df.rename(columns={'MAŠINA / DATUM': 'MAŠINA'})
         df.columns = [col.strftime('%d.%m.%Y') if isinstance(col, datetime) else str(col) for col in df.columns]
         
-        # 2. 🚀 DOPUNA: Automatski lepimo KIPER-a i sve nove mašine sa plusića na dno tabele
+        # 2. 🚀 POPRAVLJENA DOPUNA: Proveravamo oba naziva fajla (sa š i sa s) da sigurno povučemo Kipera
+        fajl_zivih_masina = ""
         if os.path.exists('spisak_mašina.csv'):
+            fajl_zivih_masina = 'spisak_mašina.csv'
+        elif os.path.exists('spisak_masina.csv'):
+            fajl_zivih_masina = 'spisak_masina.csv'
+            
+        if fajl_zivih_masina != "":
             try:
-                df_zive_masine = pd.read_csv('spisak_mašina.csv')
+                df_zive_masine = pd.read_csv(fajl_zivih_masina)
                 for _, red in df_zive_masine.iterrows():
                     gb = str(red['GARAŽNI BROJ']).strip()
                     tip = str(red['TIP MAŠINE']).strip()
