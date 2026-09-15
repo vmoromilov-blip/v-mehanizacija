@@ -63,19 +63,16 @@ elif modul == "SPISAK MAŠINA":
 elif modul == "SPISAK RADNIKA":
     st.write("## 👥 Spisak zaposlenih radnika")
     df_radnici = ucitaj_ili_napravi_bazu('SPISAK RADNIKA', ['SAP BROJ', 'PREZIME I IME', 'STATUS'])
-    
-    # Čistimo višak kolona ako se baza prvi put pravi iz Excela
     if 'EMAIL ADRESA' in df_radnici.columns:
         df_radnici = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
 
-    # DODAJEMO PLUS I MINUS IZNAD TABELE RADNIKA
     col1, col2 = st.columns(2)
     with col1:
         with st.popover("➕ Dodaj radnika"):
             novo_ime = st.text_input("Prezime i ime radnika:")
             novi_sap = st.text_input("SAP Broj:")
             if st.button("Sačuvaj radnika"):
-                if novo_ime:
+                if Server_ime:
                     novi_red = pd.DataFrame([{'SAP BROJ': novi_sap, 'PREZIME I IME': novo_ime.upper(), 'STATUS': 'AKTIVAN'}])
                     df_radnici = pd.concat([df_radnici, novi_red], ignore_index=False)
                     sacuvaj_bazu(df_radnici, 'SPISAK RADNIKA')
@@ -83,10 +80,9 @@ elif modul == "SPISAK RADNIKA":
                     st.rerun()
     with col2:
         if st.button("🗑️ Obriši selektovane radnike"):
-            st.info("Štiklirajte kućicu levo pored radnika (ili praznih redova) i upotrebite ikonicu kante u tabeli ispod.")
+            st.info("Štiklirajte kućicu levo pored radnika i upotrebite ikonicu kante u tabeli ispod.")
 
     st.write("")
-    # Vraćamo data_editor sa kućicama za brisanje
     edited_df = st.data_editor(df_radnici, use_container_width=True, num_rows="dynamic", key="editor_radnici")
     if edited_df is not None and not edited_df.equals(df_radnici):
         sacuvaj_bazu(edited_df, 'SPISAK RADNIKA')
@@ -94,12 +90,15 @@ elif modul == "SPISAK RADNIKA":
 
 elif modul == "ZAMENA":
     st.write("## 🔄 Spisak i evidencija zamena")
-    df_zamena = ucitaj_ili_napravi_bazu('ZAMENA', ['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'ZAMENA'])
+    df_zamena = ucitaj_ili_napravi_bazu('ZAMENA', ['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'SAP BROJ', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'SAP BROJ.1', 'ZAMENA'])
     df_zamena = df_zamena.rename(columns={'START DATUM': 'DATUM POČETKA', 'END DATUM': 'DATUM ZAVRŠETKA'})
     
     for col in ['DATUM POČETKA', 'DATUM ZAVRŠETKA']:
         if col in df_zamena.columns:
             df_zamena[col] = pd.to_datetime(df_zamena[col]).dt.date
+
+    # Učitavamo spisak radnika iz fascikle da bismo znali njihove SAP brojeve
+    df_svi_radnici = ucitaj_ili_napravi_bazu('SPISAK RADNIKA', ['SAP BROJ', 'PREZIME I IME', 'STATUS'])
 
     col1, col2 = st.columns(2)
     with col1:
@@ -107,23 +106,46 @@ elif modul == "ZAMENA":
             st.write("### Unesi podatke za novu zamenu")
             z_id = st.text_input("Garažni broj mašine:")
             z_smena = st.text_input("Smena:")
-            z_odsutan = st.text_input("Odsutan radnik:")
+            
+            # Umesto kucanja, biramo ljude iz padajuće liste postojećih radnika!
+            lista_radnika = sorted(df_svi_radnici['PREZIME I IME'].dropna().unique())
+            z_odsutan = st.selectbox("Izaberi odsutnog radnika:", lista_radnika)
+            z_zamena = st.selectbox("Izaberi radnika koji menja (ZAMENA):", lista_radnika)
+            
             z_pocetak = st.date_input("Datum početka:")
             z_zavrsetak = st.date_input("Datum završetka:")
-            z_zamena = st.text_input("Ko je zamena:")
+            
             if st.button("Sačuvaj zamenu"):
+                # AUTOMATSKI PRONALAZIMO SAP BROJEVE ZA OBA RADNIKA
+                sap_odsutnog = df_svi_radnici[df_svi_radnici['PREZIME I IME'] == z_odsutan]['SAP BROJ'].values
+                sap_zamene = df_svi_radnici[df_svi_radnici['PREZIME I IME'] == z_zamena]['SAP BROJ'].values
+                
+                br_odsutan = sap_odsutnog[0] if len(sap_odsutnog) > 0 else ""
+                br_zamena = sap_zamene[0] if len(sap_zamene) > 0 else ""
+                
+                # Dinamički proveravamo nazive kolona u tvom Excelu da upišemo na pravo mesto
+                kolone_u_bazi = list(df_zamena.columns)
+                sap_ods_col = 'SAP BROJ' if 'SAP BROJ' in kolone_u_bazi else kolone_u_bazi[3]
+                sap_zam_col = 'SAP BROJ.1' if 'SAP BROJ.1' in kolone_u_bazi else kolone_u_bazi[6]
+                
                 novi_red = pd.DataFrame([{
-                    'ID MAŠINE': z_id.upper(), 'SMENA': z_smena.upper(),
-                    'ODSUTAN RADNIK': z_odsutan.upper(), 'DATUM POČETKA': str(z_pocetak),
-                    'DATUM ZAVRŠETKA': str(z_zavrsetak), 'ZAMENA': z_zamena.upper()
+                    'ID MAŠINE': z_id.upper(), 
+                    'SMENA': z_smena.upper(),
+                    'ODSUTAN RADNIK': z_odsutan, 
+                    sap_ods_col: br_odsutan,
+                    'DATUM POČETKA': str(z_pocetak),
+                    'DATUM ZAVRŠETKA': str(z_zavrsetak), 
+                    sap_zam_col: br_zamena,
+                    'ZAMENA': z_zamena
                 }])
+                
                 df_zamena = pd.concat([df_zamena, novi_red], ignore_index=False)
                 sacuvaj_bazu(df_zamena, 'ZAMENA')
-                st.success("Zamena uspešno upisana!")
+                st.success("Zamena upisana i SAP brojevi automatski povučeni!")
                 st.rerun()
     with col2:
         if st.button("🗑️ Obriši selektovane zamene"):
-            st.info("Štiklirajte redove levo u tabeli i upotrebite ikonicu kante za uklanjanje starih zamena.")
+            st.info("Štiklirajte redove levo u tabeli i upotrebite ikonicu kante u tabeli ispod.")
                 
     st.write("")
     edited_df = st.data_editor(df_zamena, use_container_width=True, num_rows="dynamic", key="editor_zamena")
