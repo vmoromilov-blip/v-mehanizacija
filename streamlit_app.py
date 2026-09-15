@@ -50,7 +50,7 @@ elif modul == "SPISAK RADNIKA":
             st.rerun()
     st.write("")
     
-    # SAKRIVAMO I EMAIL I TIP DA OSTANE ČIST SPISAK RADNIKA
+    # Sakrivamo i email i tip da spisak radnika bude maksimalno čist
     prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
     st.dataframe(prikaz_df, use_container_width=True)
 
@@ -58,21 +58,31 @@ elif modul == "ZAMENA":
     st.write("## 🔄 Spisak i evidencija zamena")
     if os.path.exists(fajl_baze):
         df_zamena = pd.read_excel(fajl_baze, sheet_name='ZAMENA')
+        
+        # 1. Menjamo engleske nazive kolona u srpske na ekranu
+        prevod_kolona = {
+            'START DATUM': 'DATUM POČETKA',
+            'END DATUM': 'DATUM ZAVRŠETKA'
+        }
+        df_zamena = df_zamena.rename(columns=prevod_kolona)
+        
+        # 2. Čistimo sate i nule da ostanu samo čisti dani
+        if 'DATUM POČETKA' in df_zamena.columns:
+            df_zamena['DATUM POČETKA'] = pd.to_datetime(df_zamena['DATUM POČETKA']).dt.date
+        if 'DATUM ZAVRŠETKA' in df_zamena.columns:
+            df_zamena['DATUM ZAVRŠETKA'] = pd.to_datetime(df_zamena['DATUM ZAVRŠETKA']).dt.date
+            
     else:
-        df_zamena = pd.DataFrame(columns=['OSNOVNI RESURS', 'ZAMENA'])
+        df_zamena = pd.DataFrame(columns=['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'ZAMENA'])
 
-    # --- OVDE SMO DODALI PLUSIĆ "+" ZA ZAMENE ---
     with st.popover("➕ Dodaj novu zamenu"):
         st.write("### Unesi podatke za novu zamenu")
-        osnovno = st.text_input("Šta/Ko se menja (npr. Mašina ili Radnik):")
+        osnovno = st.text_input("Šta/Ko se menja:")
         zamenski = st.text_input("Šta/Ko je zamena:")
-        
         if st.button("Sačuvaj zamenu"):
-            if osnovno and zamenski:
-                st.success("Uspešno uneta zamena u sistem!")
-                st.rerun()
-            else:
-                st.error("Morate popuniti oba polja!")
+            st.success("Zamena uneta!")
+            st.rerun()
+            
     st.write("")
     st.dataframe(df_zamena, use_container_width=True)
 
@@ -93,3 +103,7 @@ elif modul == "PRIMALAC MAIL-A":
             st.write("")
             kolone_za_prikaz = [col for col in ['EMAIL ADRESA', 'TIP'] if col in df_mail.columns]
             st.dataframe(df_mail[kolone_za_prikaz], use_container_width=True)
+        else:
+            st.warning("Kolona 'EMAIL ADRESA' nije pronađena u šitu.")
+    else:
+        st.error("Fajl sa podacima nije dostupan.")
