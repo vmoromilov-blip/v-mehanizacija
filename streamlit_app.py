@@ -24,8 +24,8 @@ elif modul == "SPISAK MAŠINA":
     if os.path.exists(fajl_baze):
         df_masine = pd.read_excel(fajl_baze, sheet_name='SPISAK MAŠINA')
         
-        # DUGMIĆI IZNAD TABELE MAŠINA
-        col1, col2 = st.columns()
+        # DUGMIĆI IZNAD TABELE MAŠINA - POPRAVLJENO SA (2)
+        col1, col2 = st.columns(2)
         with col1:
             with st.popover("➕ Dodaj mašinu"):
                 novi_tip = st.text_input("Tip mašine (npr. BAGER):")
@@ -49,8 +49,8 @@ elif modul == "SPISAK RADNIKA":
         df_radnici = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
         prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
 
-        # DUGMIĆI IZNAD TABELE RADNIKA
-        col1, col2 = st.columns()
+        # DUGMIĆI IZNAD TABELE RADNIKA - POPRAVLJENO SA (2)
+        col1, col2 = st.columns(2)
         with col1:
             with st.popover("➕ Dodaj radnika"):
                 novo_ime = st.text_input("Ime i prezime radnika:")
@@ -77,7 +77,7 @@ elif modul == "ZAMENA":
         if 'DATUM ZAVRŠETKA' in df_zamena.columns:
             df_zamena['DATUM ZAVRŠETKA'] = pd.to_datetime(df_zamena['DATUM ZAVRŠETKA']).dt.date
             
-        col1, col2 = st.columns()
+        col1, col2 = st.columns(2)
         with col1:
             with st.popover("➕ Dodaj zamenu"):
                 osnovno = st.text_input("Šta/Ko se menja:")
@@ -101,7 +101,7 @@ elif modul == "PRIMALAC MAIL-A":
             df_mail = df_radnici[df_radnici['EMAIL ADRESA'].notna() & (df_radnici['EMAIL ADRESA'] != '')]
             kolone_za_prikaz = [col for col in ['EMAIL ADRESA', 'TIP'] if col in df_mail.columns]
             
-            col1, col2 = st.columns()
+            col1, col2 = st.columns(2)
             with col1:
                 with st.popover("➕ Dodaj email"):
                     novi_email = st.text_input("Email adresa:")
@@ -125,7 +125,7 @@ elif modul == "NOSIOCI":
         if 'DATUM POČETKA' in df_nosioci.columns:
             df_nosioci['DATUM POČETKA'] = pd.to_datetime(df_nosioci['DATUM POČETKA']).dt.date
             
-        col1, col2 = st.columns()
+        col1, col2 = st.columns(2)
         with col1:
             with st.popover("➕ Dodaj nosioca"):
                 radnik_unos = st.text_input("Prezime i ime radnika:")
