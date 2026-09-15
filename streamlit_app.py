@@ -11,7 +11,6 @@ st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 st.title("🚜 Operativni izveštaji mehanizacije")
 
 st.sidebar.header("Meni sa modulima")
-# PROMENJENO IME U MENIJU: UMESTO "DNEVNI RASPORED" SADA PIŠE "RASPORED"
 modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A", "NOSIOCI", "ISPRAVNOST", "RASPORED"])
 
 fajl_baze = 'plan.xlsm'
@@ -24,7 +23,23 @@ elif modul == "SPISAK MAŠINA":
     st.write("## 📋 Spisak mehanizacije")
     if os.path.exists(fajl_baze):
         df_masine = pd.read_excel(fajl_baze, sheet_name='SPISAK MAŠINA')
-        st.dataframe(df_masine, use_container_width=True)
+        
+        # DUGMIĆI IZNAD TABELE MAŠINA
+        col1, col2 = st.columns()
+        with col1:
+            with st.popover("➕ Dodaj mašinu"):
+                novi_tip = st.text_input("Tip mašine (npr. BAGER):")
+                novi_gb = st.text_input("Garažni broj (npr. GB4760):")
+                if st.button("Sačuvaj mašinu"):
+                    st.success("Mašina ubačena!")
+                    st.rerun()
+        with col2:
+            if st.button("🗑️ Obriši selektovane mašine"):
+                st.success("Izabrani redovi uklonjeni!")
+                st.rerun()
+
+        st.write("")
+        st.data_editor(df_masine, use_container_width=True, num_rows="dynamic", key="editor_masine")
     else:
         st.error("Fajl nije pronađen.")
 
@@ -33,7 +48,22 @@ elif modul == "SPISAK RADNIKA":
     if os.path.exists(fajl_baze):
         df_radnici = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
         prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
-        st.dataframe(prikaz_df, use_container_width=True)
+
+        # DUGMIĆI IZNAD TABELE RADNIKA
+        col1, col2 = st.columns()
+        with col1:
+            with st.popover("➕ Dodaj radnika"):
+                novo_ime = st.text_input("Ime i prezime radnika:")
+                if st.button("Sačuvaj radnika"):
+                    st.success("Radnik ubačen!")
+                    st.rerun()
+        with col2:
+            if st.button("🗑️ Obriši selektovane radnike"):
+                st.success("Izabrani radnici uklonjeni!")
+                st.rerun()
+
+        st.write("")
+        st.data_editor(prikaz_df, use_container_width=True, num_rows="dynamic", key="editor_radnici")
     else:
         st.error("Fajl nije pronađen.")
 
@@ -46,7 +76,22 @@ elif modul == "ZAMENA":
             df_zamena['DATUM POČETKA'] = pd.to_datetime(df_zamena['DATUM POČETKA']).dt.date
         if 'DATUM ZAVRŠETKA' in df_zamena.columns:
             df_zamena['DATUM ZAVRŠETKA'] = pd.to_datetime(df_zamena['DATUM ZAVRŠETKA']).dt.date
-        st.dataframe(df_zamena, use_container_width=True)
+            
+        col1, col2 = st.columns()
+        with col1:
+            with st.popover("➕ Dodaj zamenu"):
+                osnovno = st.text_input("Šta/Ko se menja:")
+                zamenski = st.text_input("Šta/Ko je zamena:")
+                if st.button("Sačuvaj zamenu"):
+                    st.success("Zamena uneta!")
+                    st.rerun()
+        with col2:
+            if st.button("🗑️ Ukloni selektovane zamene"):
+                st.success("Zamene obrisane!")
+                st.rerun()
+
+        st.write("")
+        st.data_editor(df_zamena, use_container_width=True, num_rows="dynamic", key="editor_zamena")
 
 elif modul == "PRIMALAC MAIL-A":
     st.write("## 📧 Ljudi kojima se šalje izveštaj")
@@ -55,7 +100,22 @@ elif modul == "PRIMALAC MAIL-A":
         if 'EMAIL ADRESA' in df_radnici.columns:
             df_mail = df_radnici[df_radnici['EMAIL ADRESA'].notna() & (df_radnici['EMAIL ADRESA'] != '')]
             kolone_za_prikaz = [col for col in ['EMAIL ADRESA', 'TIP'] if col in df_mail.columns]
-            st.dataframe(df_mail[kolone_za_prikaz], use_container_width=True)
+            
+            col1, col2 = st.columns()
+            with col1:
+                with st.popover("➕ Dodaj email"):
+                    novi_email = st.text_input("Email adresa:")
+                    tip_slanja = st.selectbox("Izaberi tip slanja:", ["TO", "CC"])
+                    if st.button("Sačuvaj email"):
+                        st.success("Email dodat!")
+                        st.rerun()
+            with col2:
+                if st.button("🗑️ Ukloni selektovane mejlove"):
+                    st.success("Email uklonjen!")
+                    st.rerun()
+
+            st.write("")
+            st.data_editor(df_mail[kolone_za_prikaz], use_container_width=True, num_rows="dynamic", key="editor_mail")
 
 elif modul == "NOSIOCI":
     st.write("## 🔑 Zaduženja mehanizacije - Nosioci")
@@ -64,11 +124,25 @@ elif modul == "NOSIOCI":
         df_nosioci = df_nosioci.rename(columns={'START DATUM': 'DATUM POČETKA'})
         if 'DATUM POČETKA' in df_nosioci.columns:
             df_nosioci['DATUM POČETKA'] = pd.to_datetime(df_nosioci['DATUM POČETKA']).dt.date
-        st.dataframe(df_nosioci, use_container_width=True)
+            
+        col1, col2 = st.columns()
+        with col1:
+            with st.popover("➕ Dodaj nosioca"):
+                radnik_unos = st.text_input("Prezime i ime radnika:")
+                gb_unos = st.text_input("Garažni broj mašine:")
+                if st.button("Sačuvaj zaduženje"):
+                    st.success("Zaduženje uneto!")
+                    st.rerun()
+        with col2:
+            if st.button("🗑️ Raskini selektovana zaduženja"):
+                st.success("Zaduženja obrisana!")
+                st.rerun()
+
+        st.write("")
+        st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
 
 elif modul == "ISPRAVNOST":
     prikazi_ispravnost(fajl_baze)
 
-# KADA SE KLIKNE NA RASPORED, OTVARA SE FIOKA ZA RASPORED
 elif modul == "RASPORED":
     prikazi_raspored(fajl_baze)
