@@ -15,9 +15,9 @@ modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISA
 
 fajl_baze = 'plan.xlsm'
 
-# Pomoćne funkcije za trajno čuvanje u fascikli (lokalni CSV format koji server voli za pisanje)
+# Pomoćne funkcije za trajno čuvanje u fascikli - POPRAVLJENO SLOVO F
 def ucitaj_ili_napravi_bazu(sheet_name, default_cols):
-    Fajl_csv = f"{sheet_name.lower().replace(' ', '_')}.csv"
+    fajl_csv = f"{sheet_name.lower().replace(' ', '_')}.csv"
     if os.path.exists(fajl_csv):
         return pd.read_csv(fajl_csv)
     elif os.path.exists(fajl_baze):
@@ -58,7 +58,6 @@ elif modul == "SPISAK MAŠINA":
             st.info("Štiklirajte redove direktno u tabeli ispod, pritisnite taster Delete na tastaturi ili ikonicu kante, a zatim će sistem automatski zapamtiti izmene.")
 
     st.write("")
-    # Omogućavamo živo menjanje i brisanje koje se trajno pamti
     edited_df = st.data_editor(df_masine, use_container_width=True, num_rows="dynamic", key="editor_masine")
     if edited_df is not None and not edited_df.equals(df_masine):
         sacuvaj_bazu(edited_df, 'SPISAK MAŠINA')
@@ -68,7 +67,6 @@ elif modul == "SPISAK RADNIKA":
     st.write("## 👥 Spisak zaposlenih radnika")
     df_radnici = ucitaj_ili_napravi_bazu('SPISAK RADNIKA', ['SAP BROJ', 'PREZIME I IME', 'STATUS'])
     
-    # Sakrivamo email i tip iz inicijalnog Excela ako postoje
     if 'EMAIL ADRESA' in df_radnici.columns:
         df_radnici = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
 
