@@ -17,6 +17,9 @@ def prikazi_ispravnost(fajl_baze):
     if os.path.exists(fajl_csv):
         df = pd.read_csv(fajl_csv)
         
+        # Svi prazni dani (None/NaN) se automatski popunjavaju sa "DA" da ne kvare tabelu
+        df = df.fillna('DA')
+        
         # --- AUTOMATSKO DODAVANJE NOVIH MAŠINA SA PLUSIĆA ---
         if os.path.exists('spisak_mašina.csv'):
             df_zive_masine = pd.read_csv('spisak_mašina.csv')
@@ -36,23 +39,50 @@ def prikazi_ispravnost(fajl_baze):
 
         danasnji_str = datetime.now().strftime('%d.%m.%Y')
         
-        # 1. Funkcija za automatsko bojenje ćelija
+        # --- ŽIVI UNOS: PROZORČIĆ KOJI PRENOSI STANJE NA NAREDNE DANE ---
+        with st.popover("⚙️ Promeni status mašine"):
+            st.write("### Unesi promenu statusa u kalendar")
+            izabrana_masina = st.selectbox("Izaberi mašinu (ID):", df['ID MAŠINE'].dropna().unique())
+            datum_promene = st.date_input("Izaberi datum za izmenu:", datetime.now().date())
+            datum_promene_str = datum_promene.strftime('%d.%m.%Y')
+            novi_status = st.radio("Novi status:", ["DA", "NE", "MIR", "VIK"], horizontal=True)
+            prenesi_dalje = st.checkbox("Prenesi ovaj status na sve naredne dane u godini", value=True)
+            
+            if st.button("Sačuvaj promenu trajno"):
+                if datum_promene_str in df.columns:
+                    idx = df[df['ID MAŠINE'].astype(str).str.strip() == str(izabrana_masina).strip()].index
+                    if not idx.empty:
+                        if prenesi_dalje:
+                            sve_kolone = list(df.columns)
+                            start_idx = sve_kolone.index(datum_promene_str)
+                            for c in sve_kolone[start_idx:]:
+                                df.loc[idx, c] = novi_status
+                        else:
+                            df.loc[idx, datum_promene_str] = novi_status
+                        
+                        df.to_csv(fajl_csv, index=False)
+                        st.success(f"Status trajno zabeležen u fascikli kalendara!")
+                        st.rerun()
+                else:
+                    st.error(f"Izabrani datum {datum_promene_str} se ne nalazi u kalendaru.")
+        st.write("")
+        
+        # Funkcija za boje
         def oboji_status(val):
             if val == 'NE': return 'background-color: #ffcccc; color: black; font-weight: bold;'
             elif val == 'MIR': return 'background-color: #fff2cc; color: black;'
             elif val == 'VIK': return 'background-color: #d9ead3; color: black;'
-            elif val == 'DA': return 'background-color: #ffffff; color: green;'
+            elif val == 'DA': return 'background-color: #ffffff; color: green; font-weight: bold;'
             return ''
         
-        # 2. Isticanje današnjeg dana
+        # Funkcija za boldovanje današnjeg dana
         def istakni_danasnji_dan(s):
             if s.name == danasnji_str:
-                return ['font-weight: bold; background-color: #e6f2ff; border: 2px solid blue;'] * len(s)
+                return ['font-weight: bold; background-color: #e6f2ff; border: 2px solid blue; color: black;'] * len(s)
             return [''] * len(s)
             
         styled_df = df.style.map(oboji_status).apply(istakni_danasnji_dan, axis=0)
         
-        # 3. Pametno centriranje kolona oko današnjeg dana
         sve_kolone = list(df.columns)
         osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
         
@@ -64,24 +94,15 @@ def prikazi_ispravnost(fajl_baze):
         else:
             prikazane_kolone = osnovne_kolone + [c for c in sve_kolone if c not in osnovne_kolone][:8]
             
-        # --- NOVI SISTEM: DIREKTNO MENJANJE U ĆELIJAMA ---
-        # Koristimo st.data_editor umesto st.dataframe i hvatamo sve izmene u hodu
-        izmenjena_tabela = st.data_editor(
+        # Vraćamo st.dataframe format koji podržava napredne stilove i boje
+        st.dataframe(
             styled_df,
             use_container_width=True,
             column_order=prikazane_kolone,
             column_config={
-                "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True, disabled=True),
-                "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True, disabled=True)
-            },
-            key="kalendar_ispravnosti"
+                "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True),
+                "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True)
+            }
         )
-        
-        # Ako je korisnik promenio bilo koje slovo direktno u tabeli, sajt to odmah trajno čuva
-        if izmenjena_tabela is not None and not izmenjena_tabela.equals(df):
-            izmenjena_tabela.to_csv(fajl_csv, index=False)
-            st.success("Izmene u kalendaru su uspešno sačuvane!")
-            st.rerun()
-            
     else:
         st.error("Baza podataka nije dostupna.")
