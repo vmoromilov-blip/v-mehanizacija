@@ -7,16 +7,26 @@ def prikazi_raspored(fajl_baze):
     st.write("## 📅 Kalendarski raspored mehanizacije i vozača")
     
     if os.path.exists(fajl_baze):
-        # Čitamo šit RASPORED iz Excela
         df = pd.read_excel(fajl_baze, sheet_name='RASPORED')
         df = df.rename(columns={'MAŠINA / DATUM': 'MAŠINA'})
         
-        # Svi datumi u kolonama moraju biti tekstualni da se sajt ne bi rušio
+        # --- AUTOMATSKO DODAVANJE NOVIH MAŠINA SA PLUSIĆA ---
+        if os.path.exists('spisak_mašina.csv'):
+            df_zive_masine = pd.read_csv('spisak_mašina.csv')
+            for _, red in df_zive_masine.iterrows():
+                gb = red['GARAŽNI BROJ']
+                tip = red['TIP MAŠINE']
+                if gb not in df['ID MAŠINE'].values:
+                    novi_red = {'MAŠINA': tip, 'ID MAŠINE': gb}
+                    for col in df.columns:
+                        if col not in ['MAŠINA', 'ID MAŠINE']:
+                            novi_red[col] = '' # Za raspored ostavljamo prazno polje za ime vozača
+                    df = pd.concat([df, pd.DataFrame([novi_red])], ignore_index=True)
+        # ----------------------------------------------------
+
         df.columns = [col.strftime('%d.%m.%Y') if isinstance(col, datetime) else str(col) for col in df.columns]
-        
         danasnji_str = datetime.now().strftime('%d.%m.%Y')
         
-        # Brzi unos vozača na mašinu za današnji dan
         with st.popover("🚜 Rasporedi radnika na mašinu"):
             st.write("### Unesi promenu u rasporedu")
             izabrana_masina = st.selectbox("Izaberi mašinu (ID):", df['ID MAŠINE'].dropna().unique(), key="raspored_masina")
@@ -26,7 +36,6 @@ def prikazi_raspored(fajl_baze):
                 st.rerun()
         st.write("")
         
-        # Isticanje današnjeg dana (15.09.2026) u rasporedu
         def istakni_danasnji_dan(s):
             if s.name == danasnji_str:
                 return ['font-weight: bold; background-color: #fff2cc; border: 2px solid orange;'] * len(s)
@@ -34,7 +43,6 @@ def prikazi_raspored(fajl_baze):
             
         styled_df = df.style.apply(istakni_danasnji_dan, axis=0)
         
-        # Pametno centriranje oko današnjeg dana
         sve_kolone = list(df.columns)
         osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
         
@@ -56,4 +64,4 @@ def prikazi_raspored(fajl_baze):
             }
         )
     else:
-        st.error("Fajl sa podacima 'plan.xlsm' nije pronađen.")
+        st.error("Fajl sa podacima 'plan.xlsm' isn't found.")
