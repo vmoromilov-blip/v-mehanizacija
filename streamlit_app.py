@@ -15,7 +15,7 @@ modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISA
 
 fajl_baze = 'plan.xlsm'
 
-# Pomoćne funkcije za trajno čuvanje u fascikli - POPRAVLJENO SLOVO F
+# Pomoćne funkcije za trajno čuvanje u lokalnim CSV datotekama unutar naše internet fascikle
 def ucitaj_ili_napravi_bazu(sheet_name, default_cols):
     fajl_csv = f"{sheet_name.lower().replace(' ', '_')}.csv"
     if os.path.exists(fajl_csv):
@@ -114,12 +114,46 @@ elif modul == "PRIMALAC MAIL-A":
 
 elif modul == "NOSIOCI":
     st.write("## 🔑 Zaduženja mehanizacije - Nosioci")
-    if os.path.exists(fajl_baze):
-        df_nosioci = pd.read_excel(fajl_baze, sheet_name='NOSIOCI').drop(columns=['TIP'], errors='ignore')
-        df_nosioci = df_nosioci.rename(columns={'START DATUM': 'DATUM POČETKA'})
-        if 'DATUM POČETKA' in df_nosioci.columns:
-            df_nosioci['DATUM POČETKA'] = pd.to_datetime(df_nosioci['DATUM POČETKA']).dt.date
-        st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
+    # PREBACUJEMO I NOSIOCE NA TRAJNU LOKALNU BAZU U FASCIKLI
+    df_nosioci = ucitaj_ili_napravi_bazu('NOSIOCI', ['ID MAŠINE', 'TIP TURNUSA', 'DATUM POČETKA', 'SMENA', 'SAP BROJ', 'NOSILAC'])
+    
+    if 'TIP' in df_nosioci.columns:
+        df_nosioci = df_nosioci.drop(columns=['TIP'], errors='ignore')
+    df_nosioci = df_nosioci.rename(columns={'START DATUM': 'DATUM POČETKA'})
+
+    col1, col2 = st.columns(2)
+    with col1:
+        with st.popover("➕ Dodaj nosioca"):
+            st.write("### Unesi zaduženje mehanizacije")
+            novi_id = st.text_input("Garažni broj mašine (ID MAŠINE):")
+            novi_turnus = st.text_input("Tip turnusa (npr. 1 ili 5):")
+            nova_smena = st.text_input("Smena (npr. A ili B):")
+            novi_sap_br = st.text_input("SAP Broj radnika:")
+            novi_nosilac_ime = st.text_input("Prezime i ime radnika (NOSILAC):")
+            
+            if st.button("Sačuvaj zaduženje"):
+                if novi_id and novi_nosilac_ime:
+                    novi_red = pd.DataFrame([{
+                        'ID MAŠINE': novi_id.upper(),
+                        'TIP TURNUSA': novi_turnus,
+                        'DATUM POČETKA': datetime.now().strftime('%Y-%m-%d'),
+                        'SMENA': nova_smena.upper(),
+                        'SAP BROJ': novi_sap_br,
+                        'NOSILAC': novi_nosilac_ime.upper()
+                    }])
+                    df_nosioci = pd.concat([df_nosioci, novi_red], ignore_index=False)
+                    sacuvaj_bazu(df_nosioci, 'NOSIOCI')
+                    st.success("Zaduženje uspešno i trajno zabeleženo u fascikli!")
+                    st.rerun()
+    with col2:
+        if st.button("🗑️ Raskini selektovana zaduženja"):
+            st.info("Štiklirajte kućicu skroz levo pored zaduženja koje želite da obrišete i kliknite na kantu u tabeli ispod.")
+
+    st.write("")
+    edited_df = st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
+    if edited_df is not None and not edited_df.equals(df_nosioci):
+        sacuvaj_bazu(edited_df, 'NOSIOCI')
+        st.rerun()
 
 elif modul == "ISPRAVNOST":
     prikazi_ispravnost(fajl_baze)
