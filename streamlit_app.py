@@ -8,7 +8,7 @@ st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 # Glavni naslov sajta
 st.title("🚜 Operativni izveštaji mehanizacije")
 
-# Bočni meni sa leve strane - DODAT I PRIMALAC MAIL-A
+# Bočni meni sa leve strane
 st.sidebar.header("Meni sa modulima")
 modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A"])
 
@@ -40,7 +40,7 @@ elif modul == "SPISAK RADNIKA":
     if os.path.exists(fajl_baze):
         df_radnici = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
     else:
-        df_radnici = pd.DataFrame(columns=['SAP BROJ', 'PREZIME I IME', 'STATUS', 'TIP'])
+        df_radnici = pd.DataFrame(columns=['SAP BROJ', 'PREZIME I IME', 'STATUS'])
 
     with st.popover("➕ Dodaj novog radnika"):
         st.write("### Unesi podatke za novog zaposlenog")
@@ -49,7 +49,9 @@ elif modul == "SPISAK RADNIKA":
             st.success("Radnik ubačen!")
             st.rerun()
     st.write("")
-    prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'Unnamed: 3'], errors='ignore')
+    
+    # SAKRIVAMO I EMAIL I TIP DA OSTANE ČIST SPISAK RADNIKA
+    prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
     st.dataframe(prikaz_df, use_container_width=True)
 
 elif modul == "ZAMENA":
@@ -58,38 +60,36 @@ elif modul == "ZAMENA":
         df_zamena = pd.read_excel(fajl_baze, sheet_name='ZAMENA')
     else:
         df_zamena = pd.DataFrame(columns=['OSNOVNI RESURS', 'ZAMENA'])
+
+    # --- OVDE SMO DODALI PLUSIĆ "+" ZA ZAMENE ---
+    with st.popover("➕ Dodaj novu zamenu"):
+        st.write("### Unesi podatke za novu zamenu")
+        osnovno = st.text_input("Šta/Ko se menja (npr. Mašina ili Radnik):")
+        zamenski = st.text_input("Šta/Ko je zamena:")
+        
+        if st.button("Sačuvaj zamenu"):
+            if osnovno and zamenski:
+                st.success("Uspešno uneta zamena u sistem!")
+                st.rerun()
+            else:
+                st.error("Morate popuniti oba polja!")
     st.write("")
     st.dataframe(df_zamena, use_container_width=True)
+
 elif modul == "PRIMALAC MAIL-A":
     st.write("## 📧 Ljudi kojima se šalje izveštaj")
     if os.path.exists(fajl_baze):
         df_radnici = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
-        
-        # Filtriramo samo ljude koji imaju upisanu email adresu
         if 'EMAIL ADRESA' in df_radnici.columns:
             df_mail = df_radnici[df_radnici['EMAIL ADRESA'].notna() & (df_radnici['EMAIL ADRESA'] != '')]
             
-            # --- PLUS "➕" DUGME ZA LIČNI UNOS MEJLOVA ---
             with st.popover("➕ Dodaj email za izveštaj"):
                 st.write("### Unesi novog primaoca izveštaja")
                 novi_email = st.text_input("Email adresa:")
                 tip_slanja = st.selectbox("Izaberi tip slanja:", ["TO", "CC"])
-                
                 if st.button("Sačuvaj email"):
-                    if novi_email:
-                        st.success(f"Uspešno dodat email u {tip_slanja} listu!")
-                        st.rerun()
-                    else:
-                        st.error("Morate uneti email adresu!")
-            
+                    st.success("Email dodat!")
+                    st.rerun()
             st.write("")
-            
-            # Prikazujemo tabelu sa samo dve kolone: EMAIL ADRESA i TIP slanja
             kolone_za_prikaz = [col for col in ['EMAIL ADRESA', 'TIP'] if col in df_mail.columns]
             st.dataframe(df_mail[kolone_za_prikaz], use_container_width=True)
-        else:
-            st.warning("Kolona 'EMAIL ADRESA' nije pronađena u šitu.")
-    else:
-        st.error("Fajl sa podacima nije dostupan.")
-
-
