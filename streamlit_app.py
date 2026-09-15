@@ -8,7 +8,7 @@ st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 # Glavni naslov sajta
 st.title("🚜 Operativni izveštaji mehanizacije")
 
-# Bočni meni sa leve strane - DODATI NOSIOCI
+# Bočni meni sa leve strane
 st.sidebar.header("Meni sa modulima")
 modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A", "NOSIOCI"])
 
@@ -49,7 +49,6 @@ elif modul == "SPISAK RADNIKA":
             st.success("Radnik ubačen!")
             st.rerun()
     st.write("")
-    
     prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
     st.dataframe(prikaz_df, use_container_width=True)
 
@@ -59,7 +58,6 @@ elif modul == "ZAMENA":
         df_zamena = pd.read_excel(fajl_baze, sheet_name='ZAMENA')
         prevod_kolona = {'START DATUM': 'DATUM POČETKA', 'END DATUM': 'DATUM ZAVRŠETKA'}
         df_zamena = df_zamena.rename(columns=prevod_kolona)
-        
         if 'DATUM POČETKA' in df_zamena.columns:
             df_zamena['DATUM POČETKA'] = pd.to_datetime(df_zamena['DATUM POČETKA']).dt.date
         if 'DATUM ZAVRŠETKA' in df_zamena.columns:
@@ -83,7 +81,6 @@ elif modul == "PRIMALAC MAIL-A":
         df_radnici = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
         if 'EMAIL ADRESA' in df_radnici.columns:
             df_mail = df_radnici[df_radnici['EMAIL ADRESA'].notna() & (df_radnici['EMAIL ADRESA'] != '')]
-            
             with st.popover("➕ Dodaj email za izveštaj"):
                 st.write("### Unesi novog primaoca izveštaja")
                 novi_email = st.text_input("Email adresa:")
@@ -99,13 +96,22 @@ elif modul == "PRIMALAC MAIL-A":
     else:
         st.error("Fajl sa podacima nije dostupan.")
 
-# ---> NOVI MODUL: NOSIOCI <---
 elif modul == "NOSIOCI":
     st.write("## 🔑 Zaduženja mehanizacije - Nosioci")
     if os.path.exists(fajl_baze):
         df_nosioci = pd.read_excel(fajl_baze, sheet_name='NOSIOCI')
+        
+        # 1. Izbacujemo kolonu TIP jer je nepotrebna
+        df_nosioci = df_nosioci.drop(columns=['TIP'], errors='ignore')
+        
+        # 2. Prevodimo engleski naziv u srpski
+        df_nosioci = df_nosioci.rename(columns={'START DATUM': 'DATUM POČETKA'})
+        
+        # 3. Čistimo sate i nule iz datuma
+        if 'DATUM POČETKA' in df_nosioci.columns:
+            df_nosioci['DATUM POČETKA'] = pd.to_datetime(df_nosioci['DATUM POČETKA']).dt.date
     else:
-        df_nosioci = pd.DataFrame(columns=['PREZIME I IME', 'GARAŽNI BROJ'])
+        df_nosioci = pd.DataFrame(columns=['ID MAŠINE', 'TIP TURNUSA', 'DATUM POČETKA', 'SMENA', 'SAP BROJ', 'NOSILAC'])
 
     with st.popover("➕ Dodaj novog nosioca"):
         st.write("### Unesi podatke o zaduženju")
