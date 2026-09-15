@@ -49,7 +49,7 @@ def prikazi_ispravnost(fajl_baze):
 
     danasnji_str = datetime.now().strftime('%d.%m.%Y')
     
-    # Čista forma za grupni prenos na više dana do kraja godine
+    # Forma za grupni prenos na više dana do kraja godine
     with st.popover("⚙️ Grupna promena (Prenos na više dana)"):
         st.write("### Unesi status i prenesi ga do kraja godine")
         izabrana_masina = st.selectbox("Izaberi mašinu (ID):", df['ID MAŠINE'].dropna().unique())
@@ -70,8 +70,19 @@ def prikazi_ispravnost(fajl_baze):
                     st.rerun()
     st.write("")
     
-    # --- VRAĆAMO SVE KOLONE OD 1. JANUARA ZA POTPUNU ISTORIJU ---
-    prikazane_kolone = list(df.columns)
+    # --- FIKSIRANJE CELOG KALENDARA, ALI SA AUTOMATSKIM SKOKOM NA DANAS ---
+    sve_kolone = list(df.columns)
+    osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
+    kalendarske_kolone = [c for c in sve_kolone if c not in osnovne_kolone]
+    
+    # Ako je današnji dan u tabeli, stavljamo ga na početak prikaza, a ostale dane dodajemo oko njega
+    if danasnji_str in kalendarske_kolone:
+        idx_danas = kalendarske_kolone.index(danasnji_str)
+        # Slažemo kolone tako da se prvo vide 2 dana pre, pa DANAS, pa svi dani do kraja godine, 
+        # a na sam kraj guramo stariju istoriju od januara da bi bila dostupna na klizaču ulevo!
+        poredjane_kolone = osnovne_kolone + kalendarske_kolone[max(0, idx_danas-2):] + kalendarske_kolone[:max(0, idx_danas-2)]
+    else:
+        poredjane_kolone = sve_kolone
 
     # --- KONFIGURACIJA TABELE SA PADAJUĆIM MENIJIMA ---
     konfiguracija_kolona = {
@@ -79,7 +90,7 @@ def prikazi_ispravnost(fajl_baze):
         "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True, disabled=True)
     }
     
-    for col in prikazane_kolone:
+    for col in poredjane_kolone:
         if col not in ["MAŠINA", "ID MAŠINE"]:
             if col == danasnji_str:
                 konfiguracija_kolona[col] = st.column_config.SelectboxColumn(
@@ -94,16 +105,16 @@ def prikazi_ispravnost(fajl_baze):
                     required=True
                 )
 
-    # Pokrećemo čisti data_editor sa celom istorijom i klizačem unazad
+    # Pokrećemo čisti data_editor sa novim poretkom koji instant centrira ekran na danasnji dan
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
-        column_order=prikazane_kolone,
+        column_order=poredjane_kolone,
         column_config=konfiguracija_kolona,
         key="zivi_editor_ispravnosti"
     )
     
-    # Živi i trajni upis iz padajućeg menija direktno u fasciklu
+    # Živi upis iz padajućeg menija direktno u pozadinsku fasciklu
     if izmenjeni_df is not None and not izmenjeni_df.equals(df):
         izmenjeni_df.to_csv(fajl_csv, index=False)
         st.rerun()
