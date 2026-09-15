@@ -19,41 +19,36 @@ def prikazi_raspored(fajl_baze):
             df = df.rename(columns={'MAŠINA / DATUM': 'MAŠINA'})
             df.columns = [col.strftime('%d.%m.%Y') if isinstance(col, datetime) else str(col) for col in df.columns]
             
-            # --- VOJNIČKA AUTOMATIKA PRI PRVOM POKRETANJU ---
-            # Za svaku kolonu (datum) u kalendaru računamo turnus i proveravamo zamene
+            # 1. Prvo punimo tabelu osnovnim nosiocima iz turnusa
             for col in df.columns:
                 if col not in ['MAŠINA', 'ID MAŠINE']:
-                    # 1. Povlačimo dežurnog nosioca po turnusu (radi-ladi) za taj konkretan dan
                     nosioci_za_dan = izracunaj_aktivnog_nosioca(fajl_baze, col)
-                    
                     for idx, red in df.iterrows():
                         masina_id = str(red['ID MAŠINE']).strip()
-                        # Postavljamo osnovnog nosioca iz turnusa
                         if masina_id in nosioci_za_dan:
                             df.at[idx, col] = nosioci_za_dan[masina_id]
                             
-                    # 2. Proveravamo da li za ovaj datum postoji "izričita naredba" u ZAMENAMA
-                    if os.path.exists('zamena.csv'):
-                        df_zamene = pd.read_csv('zamena.csv')
-                        try:
-                            # Pretvaramo datume u zameni u čist tekst radi poređenja
-                            df_zamene['DATUM POČETKA'] = pd.to_datetime(df_zamene['DATUM POČETKA']).dt.strftime('%d.%m.%Y')
-                            df_zamene['DATUM ZAVRŠETKA'] = pd.to_datetime(df_zamena['DATUM ZAVRŠETKA']).dt.strftime('%d.%m.%Y')
-                            
+            # 2. Prebrisavamo nosioce izričitim naredbama iz ZAMENA
+            if os.path.exists('zamena.csv'):
+                df_zamene = pd.read_csv('zamena.csv')
+                try:
+                    df_zamene['DATUM POČETKA'] = pd.to_datetime(df_zamene['DATUM POČETKA']).dt.style.strftime('%d.%m.%Y')
+                    df_zamene['DATUM ZAVRŠETKA'] = pd.to_datetime(df_zamene['DATUM ZAVRŠETKA']).dt.style.strftime('%d.%m.%Y')
+                    
+                    for col in df.columns:
+                        if col not in ['MAŠINA', 'ID MAŠINE']:
                             trenutni_dt = datetime.strptime(col, '%d.%m.%Y')
-                            
                             for _, zam_red in df_zamene.iterrows():
                                 p_dt = datetime.strptime(zam_red['DATUM POČETKA'], '%d.%m.%Y')
                                 z_dt = datetime.strptime(zam_red['DATUM ZAVRŠETKA'], '%d.%m.%Y')
                                 
-                                # Ako dan upada u vojnički opseg zamene, prebrisavamo nosioca realnim stanjem!
                                 if p_dt <= trenutni_dt <= z_dt:
                                     m_id = str(zam_red['ID MAŠINE']).strip()
                                     idx_m = df[df['ID MAŠINE'].astype(str).str.strip() == m_id].index
                                     if not idx_m.empty:
                                         df.loc[idx_m, col] = str(zam_red['ZAMENA']).upper()
-                        except:
-                            pass
+                except:
+                    pass
             df.to_csv(fajl_csv, index=False)
         else:
             st.error("Glavni Excel fajl 'plan.xlsm' nije pronađen.")
@@ -76,7 +71,6 @@ def prikazi_raspored(fajl_baze):
             postojeci_gb = df['ID MAŠINE'].astype(str).str.strip().values
             if gb not in postojeci_gb:
                 novi_red = {'MAŠINA': tip, 'ID MAŠINE': gb}
-                # Nova mašina dobija nosioca na osnovu turnusa za sve dane
                 for col in df.columns:
                     if col not in ['MAŠINA', 'ID MAŠINE']:
                         nosioci_za_dan = izracunaj_aktivnog_nosioca(fajl_baze, col)
@@ -84,7 +78,27 @@ def prikazi_raspored(fajl_baze):
                 df = pd.concat([df, pd.DataFrame([novi_red])], ignore_index=True)
         df.to_csv(fajl_csv, index=False)
 
-    # Učitavamo spisak radnika za padajući meni na dvoklik
+    # --- 🧮 AUTOMATSKO ODUZIMANJE: AKO JE MAŠINA U KVARU, MIROVANJU ILI VIKENDU, ĆELIJA OSTAJE PRAZNA ---
+    if os.path.exists('ispravnost_baza.csv'):
+        try:
+            df_isp = pd.read_csv('ispravnost_baza.csv')
+            df_isp['ID MAŠINE'] = df_isp['ID MAŠINE'].astype(str).str.strip()
+            
+            for col in df.columns:
+                if col not in ['MAŠINA', 'ID MAŠINE'] and col in df_isp.columns:
+                    for idx, red in df.iterrows():
+                        m_id = str(red['ID MAŠINE']).strip()
+                        # Tražimo status te mašine za taj konkretan dan u ispravnosti
+                        status_red = df_isp[df_isp['ID MAŠINE'] == m_id]
+                        if not status_red.empty:
+                            trenutni_status = str(status_red.iloc[0][col]).strip().upper()
+                            # Ako je status NE, MIR ili VIK, brišemo ime vozača iz rasporeda za taj dan!
+                            if trenutni_status in ['NE', 'MIR', 'VIK']:
+                                df.at[idx, col] = ''
+        except:
+            pass
+
+    # Učitavamo spisak radnika za padajući meni
     opcije_radnika = [""]
     if os.path.exists('spisak_radnika.csv'):
         try:
@@ -94,18 +108,8 @@ def prikazi_raspored(fajl_baze):
         except:
             pass
 
-    st.write("")
-    
-    # --- FIKSIRANJE CELOG KALENDARA I AUTOMATSKI SKOK NA DANAS ---
-    sve_kolone = list(df.columns)
-    osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
-    kalendarske_kolone = [c for c in sve_kolone if c not in osnovne_kolone]
-    
-    if danasnji_str in kalendarske_kolone:
-        idx_danas = kalendarske_kolone.index(danasnji_str)
-        poredjane_kolone = osnovne_kolone + kalendarske_kolone[max(0, idx_danas-2):] + kalendarske_kolone[:max(0, idx_danas-2)]
-    else:
-        poredjane_kolone = sve_kolone
+    # --- VRAĆAMO SVE KOLONE OD 1. JANUARA ZA POTPUNU ISTORIJU I KLIZAČ ---
+    prikazane_kolone = list(df.columns)
 
     # --- KONFIGURACIJA TABELE SA PADAJUĆIM MENIJIMA RADNIKA ---
     konfiguracija_kolona = {
@@ -113,7 +117,7 @@ def prikazi_raspored(fajl_baze):
         "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True, disabled=True)
     }
     
-    for col in poredjane_kolone:
+    for col in prikazane_kolone:
         if col not in ["MAŠINA", "ID MAŠINE"]:
             if len(opcije_radnika) > 1:
                 konfiguracija_kolona[col] = st.column_config.SelectboxColumn(
@@ -123,11 +127,11 @@ def prikazi_raspored(fajl_baze):
             else:
                 konfiguracija_kolona[col] = st.column_config.TextColumn(f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col)
 
-    # Pokrećemo čisti data_editor za Raspored centriran na danasnji dan
+    # Pokrećemo čisti data_editor sa celom istorijom od 1.1.2026. i klizačem unazad
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
-        column_order=poredjane_kolone,
+        column_order=prikazane_kolone,
         column_config=konfiguracija_kolona,
         key="zivi_editor_rasporeda"
     )
