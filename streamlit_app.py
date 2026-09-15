@@ -9,7 +9,7 @@ st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 # Glavni naslov sajta
 st.title("🚜 Operativni izveštaji mehanizacije")
 
-# Bočni meni sa leve strane - DODATA ISPRAVNOST
+# Bočni meni sa leve strane
 st.sidebar.header("Meni sa modulima")
 modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A", "NOSIOCI", "ISPRAVNOST"])
 
@@ -87,35 +87,33 @@ elif modul == "NOSIOCI":
         df_nosioci = pd.DataFrame(columns=['ID MAŠINE', 'TIP TURNUSA', 'DATUM POČETKA', 'SMENA', 'SAP BROJ', 'NOSILAC'])
     st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
 
-# ---> NOVI MODUL: ISPRAVNOST <---
+# ---> MODUL ISPRAVNOST (POPRAVLJEN) <---
 elif modul == "ISPRAVNOST":
     st.write("## 🛠️ Dnevna ispravnost mehanizacije")
     if os.path.exists(fajl_baze):
-        # Čitamo kalendarsku tabelu iz Excela
         df_ispravnost = pd.read_excel(fajl_baze, sheet_name='ISPRAVNOST')
-        
-        # Sređujemo prve dve kolone da nazivi budu jasni
         df_ispravnost = df_ispravnost.rename(columns={'MAŠINA / DATUM': 'MAŠINA'})
         
-        # Prikazujemo formu za brzu izmenu statusa iznad tabele
         with st.popover("⚙️ Promeni status mašine"):
             st.write("### Unesi promenu za današnji dan")
             izabrana_masina = st.selectbox("Izaberi mašinu:", df_ispravnost['ID MAŠINE'].dropna().unique())
-            novi_status = st.radio("Status:", ["DA (Ispravna)", "NE (Kvar)", "MIR (Mirovanje)", "VIK (Vikend)"], horizontal=True)
+            novi_status = st.radio("Status:", ["DA", "NE", "MIR", "VIK"], horizontal=True)
             if st.button("Ažuriraj na sajtu"):
                 st.success("Status uspešno zabeležen!")
                 st.rerun()
         
         st.write("")
         
-        # Pametno bojenje ćelija na ekranu (da NE svetli crveno, MIR žuto, VIK zeleno)
+        # Funkcija za bojenje koja radi na svim verzijama softvera
         def oboji_status(val):
-            if val == 'NE': return 'background-color: #ffcccc; color: black;'
+            if val == 'NE': return 'background-color: #ffcccc; color: black; font-weight: bold;'
             elif val == 'MIR': return 'background-color: #fff2cc; color: black;'
             elif val == 'VIK': return 'background-color: #d9ead3; color: black;'
+            elif val == 'DA': return 'background-color: #ffffff; color: green;'
             return ''
             
-        styled_df = df_ispravnost.style.applymap(oboji_status)
+        # Koristimo novu komandu .map umesto stare .applymap
+        styled_df = df_ispravnost.style.map(oboji_status)
         st.dataframe(styled_df, use_container_width=True)
         
     else:
