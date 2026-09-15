@@ -30,10 +30,10 @@ def prikazi_raspored(fajl_baze):
                             
             # 2. Prebrisavamo nosioce izričitim naredbama iz ZAMENA
             if os.path.exists('zamena.csv'):
-                df_zamene = pd.read_csv('zamena.csv')
                 try:
-                    df_zamene['DATUM POČETKA'] = pd.to_datetime(df_zamene['DATUM POČETKA']).dt.style.strftime('%d.%m.%Y')
-                    df_zamene['DATUM ZAVRŠETKA'] = pd.to_datetime(df_zamene['DATUM ZAVRŠETKA']).dt.style.strftime('%d.%m.%Y')
+                    df_zamene = pd.read_csv('zamena.csv')
+                    df_zamene['DATUM POČETKA'] = pd.to_datetime(df_zamene['DATUM POČETKA']).dt.strftime('%d.%m.%Y')
+                    df_zamene['DATUM ZAVRŠETKA'] = pd.to_datetime(df_zamene['DATUM ZAVRŠETKA']).dt.strftime('%d.%m.%Y')
                     
                     for col in df.columns:
                         if col not in ['MAŠINA', 'ID MAŠINE']:
@@ -78,7 +78,7 @@ def prikazi_raspored(fajl_baze):
                 df = pd.concat([df, pd.DataFrame([novi_red])], ignore_index=True)
         df.to_csv(fajl_csv, index=False)
 
-    # --- 🧮 AUTOMATSKO ODUZIMANJE: AKO JE MAŠINA U KVARU, MIROVANJU ILI VIKENDU, ĆELIJA OSTAJE PRAZNA ---
+    # --- 🧮 AUTOMATSKO ODUZIMANJE NA OSNOVU ISPRAVNOSTI (POPRAVLJENO SADA) ---
     if os.path.exists('ispravnost_baza.csv'):
         try:
             df_isp = pd.read_csv('ispravnost_baza.csv')
@@ -88,11 +88,10 @@ def prikazi_raspored(fajl_baze):
                 if col not in ['MAŠINA', 'ID MAŠINE'] and col in df_isp.columns:
                     for idx, red in df.iterrows():
                         m_id = str(red['ID MAŠINE']).strip()
-                        # Tražimo status te mašine za taj konkretan dan u ispravnosti
                         status_red = df_isp[df_isp['ID MAŠINE'] == m_id]
                         if not status_red.empty:
-                            trenutni_status = str(status_red.iloc[0][col]).strip().upper()
-                            # Ako je status NE, MIR ili VIK, brišemo ime vozača iz rasporeda za taj dan!
+                            # Čitamo status preko tačnog imena kolone (datuma)
+                            trenutni_status = str(status_red[col].values[0]).strip().upper()
                             if trenutni_status in ['NE', 'MIR', 'VIK']:
                                 df.at[idx, col] = ''
         except:
@@ -108,7 +107,6 @@ def prikazi_raspored(fajl_baze):
         except:
             pass
 
-    # --- VRAĆAMO SVE KOLONE OD 1. JANUARA ZA POTPUNU ISTORIJU I KLIZAČ ---
     prikazane_kolone = list(df.columns)
 
     # --- KONFIGURACIJA TABELE SA PADAJUĆIM MENIJIMA RADNIKA ---
@@ -127,7 +125,7 @@ def prikazi_raspored(fajl_baze):
             else:
                 konfiguracija_kolona[col] = st.column_config.TextColumn(f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col)
 
-    # Pokrećemo čisti data_editor sa celom istorijom od 1.1.2026. i klizačem unazad
+    # Pokrećemo čisti data_editor sa celom istorijom od 1.1.2026. i klizačem
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
