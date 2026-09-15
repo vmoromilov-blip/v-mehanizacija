@@ -25,15 +25,18 @@ elif modul == "SPISAK MAŠINA":
     else:
         df_masine = pd.DataFrame(columns=['TIP MAŠINE', 'GARAŽNI BROJ'])
 
-    with st.popover("➕ Dodaj novu mašinu"):
-        st.write("### Unesi podatke za novu mehanizaciju")
-        novi_tip = st.text_input("Tip mašine:")
-        novi_gb = st.text_input("Garažni broj:")
-        if st.button("Sačuvaj mašinu"):
-            st.success("Mašina ubačena!")
-            st.rerun()
-    st.write("")
-    st.dataframe(df_masine, use_container_width=True)
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        with st.popover("➕ Dodaj mašinu"):
+            novi_tip = st.text_input("Tip mašine:")
+            novi_gb = st.text_input("Garažni broj:")
+            if st.button("Sačuvaj mašinu"):
+                st.success("Mašina ubačena!")
+                st.rerun()
+
+    # Moderan sistem za brisanje redova kroz tabelu
+    edited_df = st.data_editor(df_masine, use_container_width=True, num_rows="dynamic", key="editor_masine")
+    st.info("💡 Napomena: Da obrišeš mašinu na telefonu, štikliraj kućicu skroz levo pored tog reda i pritisni taster 'Delete' na tastaturi ili ikonicu kante.")
 
 elif modul == "SPISAK RADNIKA":
     st.write("## 👥 Spisak zaposlenih radnika")
@@ -42,22 +45,25 @@ elif modul == "SPISAK RADNIKA":
     else:
         df_radnici = pd.DataFrame(columns=['SAP BROJ', 'PREZIME I IME', 'STATUS'])
 
-    with st.popover("➕ Dodaj novog radnika"):
-        st.write("### Unesi podatke za novog zaposlenog")
-        novo_ime = st.text_input("Ime i prezime radnika:")
-        if st.button("Sačuvaj radnika"):
-            st.success("Radnik ubačen!")
-            st.rerun()
-    st.write("")
     prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
-    st.dataframe(prikaz_df, use_container_width=True)
+
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        with st.popover("➕ Dodaj radnika"):
+            novo_ime = st.text_input("Ime i prezime radnika:")
+            if st.button("Sačuvaj radnika"):
+                st.success("Radnik ubačen!")
+                st.rerun()
+
+    # Tabela za radnike sa opcijom brisanja
+    edited_df = st.data_editor(prikaz_df, use_container_width=True, num_rows="dynamic", key="editor_radnici")
+    st.info("💡 Napomena: Da obrišeš radnika (otkaz, penzija), štikliraj kućicu skroz levo pored njegovog imena i pritisni ikonicu kante.")
 
 elif modul == "ZAMENA":
     st.write("## 🔄 Spisak i evidencija zamena")
     if os.path.exists(fajl_baze):
         df_zamena = pd.read_excel(fajl_baze, sheet_name='ZAMENA')
-        prevod_kolona = {'START DATUM': 'DATUM POČETKA', 'END DATUM': 'DATUM ZAVRŠETKA'}
-        df_zamena = df_zamena.rename(columns=prevod_kolona)
+        df_zamena = df_zamena.rename(columns={'START DATUM': 'DATUM POČETKA', 'END DATUM': 'DATUM ZAVRŠETKA'})
         if 'DATUM POČETKA' in df_zamena.columns:
             df_zamena['DATUM POČETKA'] = pd.to_datetime(df_zamena['DATUM POČETKA']).dt.date
         if 'DATUM ZAVRŠETKA' in df_zamena.columns:
@@ -65,15 +71,17 @@ elif modul == "ZAMENA":
     else:
         df_zamena = pd.DataFrame(columns=['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'ZAMENA'])
 
-    with st.popover("➕ Dodaj novu zamenu"):
-        st.write("### Unesi podatke za novu zamenu")
-        osnovno = st.text_input("Šta/Ko se menja:")
-        zamenski = st.text_input("Šta/Ko je zamena:")
-        if st.button("Sačuvaj zamenu"):
-            st.success("Zamena uneta!")
-            st.rerun()
-    st.write("")
-    st.dataframe(df_zamena, use_container_width=True)
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        with st.popover("➕ Dodaj zamenu"):
+            osnovno = st.text_input("Šta/Ko se menja:")
+            zamenski = st.text_input("Šta/Ko je zamena:")
+            if st.button("Sačuvaj zamenu"):
+                st.success("Zamena uneta!")
+                st.rerun()
+
+    # Tabela za zamene sa opcijom brisanja starih zamena
+    edited_df = st.data_editor(df_zamena, use_container_width=True, num_rows="dynamic", key="editor_zamena")
 
 elif modul == "PRIMALAC MAIL-A":
     st.write("## 📧 Ljudi kojima se šalje izveštaj")
@@ -81,45 +89,42 @@ elif modul == "PRIMALAC MAIL-A":
         df_radnici = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
         if 'EMAIL ADRESA' in df_radnici.columns:
             df_mail = df_radnici[df_radnici['EMAIL ADRESA'].notna() & (df_radnici['EMAIL ADRESA'] != '')]
-            with st.popover("➕ Dodaj email za izveštaj"):
-                st.write("### Unesi novog primaoca izveštaja")
-                novi_email = st.text_input("Email adresa:")
-                tip_slanja = st.selectbox("Izaberi tip slanja:", ["TO", "CC"])
-                if st.button("Sačuvaj email"):
-                    st.success("Email dodat!")
-                    st.rerun()
-            st.write("")
+            
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                with st.popover("➕ Dodaj email"):
+                    novi_email = st.text_input("Email adresa:")
+                    tip_slanja = st.selectbox("Izaberi tip slanja:", ["TO", "CC"])
+                    if st.button("Sačuvaj email"):
+                        st.success("Email dodat!")
+                        st.rerun()
+            
             kolone_za_prikaz = [col for col in ['EMAIL ADRESA', 'TIP'] if col in df_mail.columns]
-            st.dataframe(df_mail[kolone_za_prikaz], use_container_width=True)
+            # Tabela za mejlove sa opcijom uklanjanja sa liste slanja
+            edited_df = st.data_editor(df_mail[kolone_za_prikaz], use_container_width=True, num_rows="dynamic", key="editor_mail")
         else:
-            st.warning("Kolona 'EMAIL ADRESA' nije pronađena u šitu.")
+            st.warning("Kolona 'EMAIL ADRESA' nije pronađena.")
     else:
         st.error("Fajl sa podacima nije dostupan.")
 
 elif modul == "NOSIOCI":
     st.write("## 🔑 Zaduženja mehanizacije - Nosioci")
     if os.path.exists(fajl_baze):
-        df_nosioci = pd.read_excel(fajl_baze, sheet_name='NOSIOCI')
-        
-        # 1. Izbacujemo kolonu TIP jer je nepotrebna
-        df_nosioci = df_nosioci.drop(columns=['TIP'], errors='ignore')
-        
-        # 2. Prevodimo engleski naziv u srpski
+        df_nosioci = pd.read_excel(fajl_baze, sheet_name='NOSIOCI').drop(columns=['TIP'], errors='ignore')
         df_nosioci = df_nosioci.rename(columns={'START DATUM': 'DATUM POČETKA'})
-        
-        # 3. Čistimo sate i nule iz datuma
         if 'DATUM POČETKA' in df_nosioci.columns:
             df_nosioci['DATUM POČETKA'] = pd.to_datetime(df_nosioci['DATUM POČETKA']).dt.date
     else:
         df_nosioci = pd.DataFrame(columns=['ID MAŠINE', 'TIP TURNUSA', 'DATUM POČETKA', 'SMENA', 'SAP BROJ', 'NOSILAC'])
 
-    with st.popover("➕ Dodaj novog nosioca"):
-        st.write("### Unesi podatke o zaduženju")
-        radnik_unos = st.text_input("Prezime i ime radnika:")
-        gb_unos = st.text_input("Garažni broj mašine:")
-        if st.button("Sačuvaj zaduženje"):
-            st.success("Zaduženje uneto!")
-            st.rerun()
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        with st.popover("➕ Dodaj nosioca"):
+            radnik_unos = st.text_input("Prezime i ime radnika:")
+            gb_unos = st.text_input("Garažni broj mašine:")
+            if st.button("Sačuvaj zaduženje"):
+                st.success("Zaduženje uneto!")
+                st.rerun()
             
-    st.write("")
-    st.dataframe(df_nosioci, use_container_width=True)
+    # Tabela za nosioce sa opcijom brisanja zaduženja
+    edited_df = st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
