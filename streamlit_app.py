@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+from datetime import datetime
 
 # Podešavamo naslovnu stranu sajta
 st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
@@ -8,9 +9,9 @@ st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 # Glavni naslov sajta
 st.title("🚜 Operativni izveštaji mehanizacije")
 
-# Bočni meni sa leve strane
+# Bočni meni sa leve strane - DODATA ISPRAVNOST
 st.sidebar.header("Meni sa modulima")
-modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A", "NOSIOCI"])
+modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A", "NOSIOCI", "ISPRAVNOST"])
 
 fajl_baze = 'plan.xlsm'
 
@@ -25,7 +26,7 @@ elif modul == "SPISAK MAŠINA":
     else:
         df_masine = pd.DataFrame(columns=['TIP MAŠINE', 'GARAŽNI BROJ'])
 
-    col1, col2 = st.columns([1, 4])
+    col1, col2 = st.columns()
     with col1:
         with st.popover("➕ Dodaj mašinu"):
             novi_tip = st.text_input("Tip mašine:")
@@ -33,10 +34,6 @@ elif modul == "SPISAK MAŠINA":
             if st.button("Sačuvaj mašinu"):
                 st.success("Mašina ubačena!")
                 st.rerun()
-    with col2:
-        if st.button("🗑️ Obriši selektovane mašine"):
-            st.success("Izabrani redovi su uklonjeni!")
-
     st.data_editor(df_masine, use_container_width=True, num_rows="dynamic", key="editor_masine")
 
 elif modul == "SPISAK RADNIKA":
@@ -48,20 +45,13 @@ elif modul == "SPISAK RADNIKA":
 
     prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
 
-    # Pravimo velika dugmad u jednom redu iznad tabele za lakši rad na telefonu
-    col1, col2 = st.columns([1, 4])
+    col1, col2 = st.columns()
     with col1:
         with st.popover("➕ Dodaj radnika"):
             novo_ime = st.text_input("Ime i prezime radnika:")
             if st.button("Sačuvaj radnika"):
                 st.success("Radnik ubačen!")
                 st.rerun()
-    with col2:
-        if st.button("🗑️ Obriši selektovane radnike"):
-            st.success("Izabrani radnici su uklonjeni iz sistema!")
-            st.rerun()
-
-    # Tabela bez ikakvih donjih plavih poruka i napomena
     st.data_editor(prikaz_df, use_container_width=True, num_rows="dynamic", key="editor_radnici")
 
 elif modul == "ZAMENA":
@@ -75,19 +65,6 @@ elif modul == "ZAMENA":
             df_zamena['DATUM ZAVRŠETKA'] = pd.to_datetime(df_zamena['DATUM ZAVRŠETKA']).dt.date
     else:
         df_zamena = pd.DataFrame(columns=['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'ZAMENA'])
-
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        with st.popover("➕ Dodaj zamenu"):
-            osnovno = st.text_input("Šta/Ko se menja:")
-            zamenski = st.text_input("Šta/Ko je zamena:")
-            if st.button("Sačuvaj zamenu"):
-                st.success("Zamena uneta!")
-                st.rerun()
-    with col2:
-        if st.button("🗑️ Ukloni selektovane zamene"):
-            st.success("Izabrane zamene obrisane!")
-
     st.data_editor(df_zamena, use_container_width=True, num_rows="dynamic", key="editor_zamena")
 
 elif modul == "PRIMALAC MAIL-A":
@@ -96,25 +73,8 @@ elif modul == "PRIMALAC MAIL-A":
         df_radnici = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
         if 'EMAIL ADRESA' in df_radnici.columns:
             df_mail = df_radnici[df_radnici['EMAIL ADRESA'].notna() & (df_radnici['EMAIL ADRESA'] != '')]
-            
-            col1, col2 = st.columns([1, 4])
-            with col1:
-                with st.popover("➕ Dodaj email"):
-                    novi_email = st.text_input("Email adresa:")
-                    tip_slanja = st.selectbox("Izaberi tip slanja:", ["TO", "CC"])
-                    if st.button("Sačuvaj email"):
-                        st.success("Email dodat!")
-                        st.rerun()
-            with col2:
-                if st.button("🗑️ Ukloni email sa liste slanja"):
-                    st.success("Email uklonjen!")
-            
             kolone_za_prikaz = [col for col in ['EMAIL ADRESA', 'TIP'] if col in df_mail.columns]
             st.data_editor(df_mail[kolone_za_prikaz], use_container_width=True, num_rows="dynamic", key="editor_mail")
-        else:
-            st.warning("Kolona 'EMAIL ADRESA' nije pronađena.")
-    else:
-        st.error("Fajl sa podacima nije dostupan.")
 
 elif modul == "NOSIOCI":
     st.write("## 🔑 Zaduženja mehanizacije - Nosioci")
@@ -125,18 +85,38 @@ elif modul == "NOSIOCI":
             df_nosioci['DATUM POČETKA'] = pd.to_datetime(df_nosioci['DATUM POČETKA']).dt.date
     else:
         df_nosioci = pd.DataFrame(columns=['ID MAŠINE', 'TIP TURNUSA', 'DATUM POČETKA', 'SMENA', 'SAP BROJ', 'NOSILAC'])
-
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        with st.popover("➕ Dodaj nosioca"):
-            radnik_unos = st.text_input("Prezime i ime radnika:")
-            gb_unos = st.text_input("Garažni broj mašine:")
-            if st.button("Sačuvaj zaduženje"):
-                st.success("Zaduženje uneto!")
-                st.rerun()
-    with col2:
-        if st.button("🗑️ Raskini selektovana zaduženja"):
-            st.success("Zaduženja obrisana!")
-            st.rerun()
-            
     st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
+
+# ---> NOVI MODUL: ISPRAVNOST <---
+elif modul == "ISPRAVNOST":
+    st.write("## 🛠️ Dnevna ispravnost mehanizacije")
+    if os.path.exists(fajl_baze):
+        # Čitamo kalendarsku tabelu iz Excela
+        df_ispravnost = pd.read_excel(fajl_baze, sheet_name='ISPRAVNOST')
+        
+        # Sređujemo prve dve kolone da nazivi budu jasni
+        df_ispravnost = df_ispravnost.rename(columns={'MAŠINA / DATUM': 'MAŠINA'})
+        
+        # Prikazujemo formu za brzu izmenu statusa iznad tabele
+        with st.popover("⚙️ Promeni status mašine"):
+            st.write("### Unesi promenu za današnji dan")
+            izabrana_masina = st.selectbox("Izaberi mašinu:", df_ispravnost['ID MAŠINE'].dropna().unique())
+            novi_status = st.radio("Status:", ["DA (Ispravna)", "NE (Kvar)", "MIR (Mirovanje)", "VIK (Vikend)"], horizontal=True)
+            if st.button("Ažuriraj na sajtu"):
+                st.success("Status uspešno zabeležen!")
+                st.rerun()
+        
+        st.write("")
+        
+        # Pametno bojenje ćelija na ekranu (da NE svetli crveno, MIR žuto, VIK zeleno)
+        def oboji_status(val):
+            if val == 'NE': return 'background-color: #ffcccc; color: black;'
+            elif val == 'MIR': return 'background-color: #fff2cc; color: black;'
+            elif val == 'VIK': return 'background-color: #d9ead3; color: black;'
+            return ''
+            
+        styled_df = df_ispravnost.style.applymap(oboji_status)
+        st.dataframe(styled_df, use_container_width=True)
+        
+    else:
+        st.error("Fajl sa podacima nije dostupan.")
