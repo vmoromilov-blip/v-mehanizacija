@@ -2,13 +2,16 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
+
+# UVOZIMO NAŠE FIOKE ZA ISPRAVNOST I RASPORED
 from ispravnost import prikazi_ispravnost
+from raspored import prikazi_raspored
 
 st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 st.title("🚜 Operativni izveštaji mehanizacije")
 
 st.sidebar.header("Meni sa modulima")
-modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A", "NOSIOCI", "ISPRAVNOST"])
+modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A", "NOSIOCI", "ISPRAVNOST", "DNEVNI RASPORED"])
 
 fajl_baze = 'plan.xlsm'
 
@@ -64,3 +67,7 @@ elif modul == "NOSIOCI":
 
 elif modul == "ISPRAVNOST":
     prikazi_ispravnost(fajl_baze)
+
+# KADA NEKO KLIKNE NA DNEVNI RASPORED, OTVARA SE NOVA FIOKA RASPORED
+elif modul == "DNEVNI RASPORED":
+    prikazi_raspored(fajl_baze)
