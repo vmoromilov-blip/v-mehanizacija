@@ -70,7 +70,7 @@ elif modul == "SPISAK RADNIKA":
             novo_ime = st.text_input("Prezime i ime radnika:")
             novi_sap = st.text_input("SAP Broj:")
             if st.button("Sačuvaj radnika"):
-                if ...:
+                if novo_ime:
                     novi_red = pd.DataFrame([{'SAP BROJ': novi_sap, 'PREZIME I IME': novo_ime.upper(), 'STATUS': 'AKTIVAN'}])
                     df_radnici = pd.concat([df_radnici, novi_red], ignore_index=False)
                     sacuvaj_bazu(df_radnici, 'SPISAK RADNIKA')
@@ -84,10 +84,14 @@ elif modul == "SPISAK RADNIKA":
 
 elif modul == "ZAMENA":
     st.write("## 🔄 Spisak i evidencija zamena")
-    # PREBACUJEMO I ZAMENE NA TRAJNU BAZU U FASCIKLI
     df_zamena = ucitaj_ili_napravi_bazu('ZAMENA', ['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'ZAMENA'])
     df_zamena = df_zamena.rename(columns={'START DATUM': 'DATUM POČETKA', 'END DATUM': 'DATUM ZAVRŠETKA'})
     
+    # Čistimo sate i nule iz datuma u koloni
+    for col in ['DATUM POČETKA', 'DATUM ZAVRŠETKA']:
+        if col in df_zamena.columns:
+            df_zamena[col] = pd.to_datetime(df_zamena[col]).dt.date
+
     col1, col2 = st.columns(2)
     with col1:
         with st.popover("➕ Dodaj zamenu"):
@@ -107,8 +111,11 @@ elif modul == "ZAMENA":
                 }])
                 df_zamena = pd.concat([df_zamena, novi_red], ignore_index=False)
                 sacuvaj_bazu(df_zamena, 'ZAMENA')
-                st.success("Zamena uspešno upisana u fasciklu!")
+                st.success("Zamena uspešno upisana!")
                 st.rerun()
+    with col2:
+        if st.button("🗑️ Obriši selektovane zamene"):
+            st.info("Štiklirajte redove levo u tabeli i upotrebite ikonicu kante za uklanjanje starih zamena.")
                 
     st.write("")
     edited_df = st.data_editor(df_zamena, use_container_width=True, num_rows="dynamic", key="editor_zamena")
