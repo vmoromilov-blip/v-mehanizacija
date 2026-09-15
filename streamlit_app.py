@@ -15,7 +15,6 @@ modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISA
 
 fajl_baze = 'plan.xlsm'
 
-# Pomoćne funkcije za trajno čuvanje u lokalnim CSV datotekama unutar naše internet fascikle
 def ucitaj_ili_napravi_bazu(sheet_name, default_cols):
     fajl_csv = f"{sheet_name.lower().replace(' ', '_')}.csv"
     if os.path.exists(fajl_csv):
@@ -40,7 +39,6 @@ if modul == "Početna":
 elif modul == "SPISAK MAŠINA":
     st.write("## 📋 Spisak mehanizacije")
     df_masine = ucitaj_ili_napravi_bazu('SPISAK MAŠINA', ['TIP MAŠINE', 'GARAŽNI BROJ'])
-    
     col1, col2 = st.columns(2)
     with col1:
         with st.popover("➕ Dodaj mašinu"):
@@ -51,12 +49,10 @@ elif modul == "SPISAK MAŠINA":
                     novi_red = pd.DataFrame([{'TIP MAŠINE': novi_tip.upper(), 'GARAŽNI BROJ': novi_gb.upper()}])
                     df_masine = pd.concat([df_masine, novi_red], ignore_index=False)
                     sacuvaj_bazu(df_masine, 'SPISAK MAŠINA')
-                    st.success("Mašina trajno upisana u fasciklu!")
+                    st.success("Mašina upisana!")
                     st.rerun()
     with col2:
-        if st.button("🗑️ Obriši selektovane mašine"):
-            st.info("Štiklirajte redove direktno u tabeli ispod, pritisnite taster Delete na tastaturi ili ikonicu kante, a zatim će sistem automatski zapamtiti izmene.")
-
+        st.info("Štiklirajte kućicu levo i pritisnite ikonicu kante u tabeli za brisanje.")
     st.write("")
     edited_df = st.data_editor(df_masine, use_container_width=True, num_rows="dynamic", key="editor_masine")
     if edited_df is not None and not edited_df.equals(df_masine):
@@ -66,26 +62,20 @@ elif modul == "SPISAK MAŠINA":
 elif modul == "SPISAK RADNIKA":
     st.write("## 👥 Spisak zaposlenih radnika")
     df_radnici = ucitaj_ili_napravi_bazu('SPISAK RADNIKA', ['SAP BROJ', 'PREZIME I IME', 'STATUS'])
-    
     if 'EMAIL ADRESA' in df_radnici.columns:
         df_radnici = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
-
     col1, col2 = st.columns(2)
     with col1:
         with st.popover("➕ Dodaj radnika"):
             novo_ime = st.text_input("Prezime i ime radnika:")
             novi_sap = st.text_input("SAP Broj:")
             if st.button("Sačuvaj radnika"):
-                if novo_ime:
+                if ...:
                     novi_red = pd.DataFrame([{'SAP BROJ': novi_sap, 'PREZIME I IME': novo_ime.upper(), 'STATUS': 'AKTIVAN'}])
                     df_radnici = pd.concat([df_radnici, novi_red], ignore_index=False)
                     sacuvaj_bazu(df_radnici, 'SPISAK RADNIKA')
-                    st.success("Radnik trajno upisan u fasciklu!")
+                    st.success("Radnik upisan!")
                     st.rerun()
-    with col2:
-        if st.button("🗑️ Obriši selektovane radnike"):
-            st.info("Označite radnika kućicom skroz levo u tabeli i upotrebite ikonicu kante za trajno uklanjanje.")
-
     st.write("")
     edited_df = st.data_editor(df_radnici, use_container_width=True, num_rows="dynamic", key="editor_radnici")
     if edited_df is not None and not edited_df.equals(df_radnici):
@@ -94,14 +84,37 @@ elif modul == "SPISAK RADNIKA":
 
 elif modul == "ZAMENA":
     st.write("## 🔄 Spisak i evidencija zamena")
-    if os.path.exists(fajl_baze):
-        df_zamena = pd.read_excel(fajl_baze, sheet_name='ZAMENA')
-        df_zamena = df_zamena.rename(columns={'START DATUM': 'DATUM POČETKA', 'END DATUM': 'DATUM ZAVRŠETKA'})
-        if 'DATUM POČETKA' in df_zamena.columns:
-            df_zamena['DATUM POČETKA'] = pd.to_datetime(df_zamena['DATUM POČETKA']).dt.date
-        if 'DATUM ZAVRŠETKA' in df_zamena.columns:
-            df_zamena['DATUM ZAVRŠETKA'] = pd.to_datetime(df_zamena['DATUM ZAVRŠETKA']).dt.date
-        st.data_editor(df_zamena, use_container_width=True, num_rows="dynamic", key="editor_zamena")
+    # PREBACUJEMO I ZAMENE NA TRAJNU BAZU U FASCIKLI
+    df_zamena = ucitaj_ili_napravi_bazu('ZAMENA', ['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'ZAMENA'])
+    df_zamena = df_zamena.rename(columns={'START DATUM': 'DATUM POČETKA', 'END DATUM': 'DATUM ZAVRŠETKA'})
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        with st.popover("➕ Dodaj zamenu"):
+            st.write("### Unesi podatke za novu zamenu")
+            z_id = st.text_input("Garažni broj mašine:")
+            z_smena = st.text_input("Smena:")
+            z_odsutan = st.text_input("Odsutan radnik:")
+            z_pocetak = st.date_input("Datum početka:")
+            z_zavrsetak = st.date_input("Datum završetka:")
+            z_zamena = st.text_input("Ko je zamena:")
+            
+            if st.button("Sačuvaj zamenu"):
+                novi_red = pd.DataFrame([{
+                    'ID MAŠINE': z_id.upper(), 'SMENA': z_smena.upper(),
+                    'ODSUTAN RADNIK': z_odsutan.upper(), 'DATUM POČETKA': str(z_pocetak),
+                    'DATUM ZAVRŠETKA': str(z_zavrsetak), 'ZAMENA': z_zamena.upper()
+                }])
+                df_zamena = pd.concat([df_zamena, novi_red], ignore_index=False)
+                sacuvaj_bazu(df_zamena, 'ZAMENA')
+                st.success("Zamena uspešno upisana u fasciklu!")
+                st.rerun()
+                
+    st.write("")
+    edited_df = st.data_editor(df_zamena, use_container_width=True, num_rows="dynamic", key="editor_zamena")
+    if edited_df is not None and not edited_df.equals(df_zamena):
+        sacuvaj_bazu(edited_df, 'ZAMENA')
+        st.rerun()
 
 elif modul == "PRIMALAC MAIL-A":
     st.write("## 📧 Ljudi kojima se šalje izveštaj")
@@ -114,41 +127,26 @@ elif modul == "PRIMALAC MAIL-A":
 
 elif modul == "NOSIOCI":
     st.write("## 🔑 Zaduženja mehanizacije - Nosioci")
-    # PREBACUJEMO I NOSIOCE NA TRAJNU LOKALNU BAZU U FASCIKLI
     df_nosioci = ucitaj_ili_napravi_bazu('NOSIOCI', ['ID MAŠINE', 'TIP TURNUSA', 'DATUM POČETKA', 'SMENA', 'SAP BROJ', 'NOSILAC'])
-    
-    if 'TIP' in df_nosioci.columns:
-        df_nosioci = df_nosioci.drop(columns=['TIP'], errors='ignore')
     df_nosioci = df_nosioci.rename(columns={'START DATUM': 'DATUM POČETKA'})
-
     col1, col2 = st.columns(2)
     with col1:
         with st.popover("➕ Dodaj nosioca"):
-            st.write("### Unesi zaduženje mehanizacije")
             novi_id = st.text_input("Garažni broj mašine (ID MAŠINE):")
-            novi_turnus = st.text_input("Tip turnusa (npr. 1 ili 5):")
-            nova_smena = st.text_input("Smena (npr. A ili B):")
-            novi_sap_br = st.text_input("SAP Broj radnika:")
-            novi_nosilac_ime = st.text_input("Prezime i ime radnika (NOSILAC):")
-            
+            novi_turnus = st.text_input("Tip turnusa:")
+            nova_smena = st.text_input("Smena:")
+            novi_sap_br = st.text_input("SAP Broj:")
+            novi_nosilac_ime = st.text_input("Prezime i ime radnika:")
             if st.button("Sačuvaj zaduženje"):
-                if novi_id and novi_nosilac_ime:
-                    novi_red = pd.DataFrame([{
-                        'ID MAŠINE': novi_id.upper(),
-                        'TIP TURNUSA': novi_turnus,
-                        'DATUM POČETKA': datetime.now().strftime('%Y-%m-%d'),
-                        'SMENA': nova_smena.upper(),
-                        'SAP BROJ': novi_sap_br,
-                        'NOSILAC': novi_nosilac_ime.upper()
-                    }])
-                    df_nosioci = pd.concat([df_nosioci, novi_red], ignore_index=False)
-                    sacuvaj_bazu(df_nosioci, 'NOSIOCI')
-                    st.success("Zaduženje uspešno i trajno zabeleženo u fascikli!")
-                    st.rerun()
-    with col2:
-        if st.button("🗑️ Raskini selektovana zaduženja"):
-            st.info("Štiklirajte kućicu skroz levo pored zaduženja koje želite da obrišete i kliknite na kantu u tabeli ispod.")
-
+                novi_red = pd.DataFrame([{
+                    'ID MAŠINE': novi_id.upper(), 'TIP TURNUSA': novi_turnus,
+                    'DATUM POČETKA': datetime.now().strftime('%Y-%m-%d'), 'SMENA': nova_smena.upper(),
+                    'SAP BROJ': novi_sap_br, 'NOSILAC': novi_nosilac_ime.upper()
+                }])
+                df_nosioci = pd.concat([df_nosioci, novi_red], ignore_index=False)
+                sacuvaj_bazu(df_nosioci, 'NOSIOCI')
+                st.success("Zaduženje upisano!")
+                st.rerun()
     st.write("")
     edited_df = st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
     if edited_df is not None and not edited_df.equals(df_nosioci):
