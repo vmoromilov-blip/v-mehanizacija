@@ -7,29 +7,24 @@ def prikazi_raspored(fajl_baze):
     st.write("## 📅 Kalendarski raspored mehanizacije i vozača")
     
     if os.path.exists(fajl_baze):
-        # 1. Čitamo originalni šit RASPORED iz Excela
         df = pd.read_excel(fajl_baze, sheet_name='RASPORED')
         df = df.rename(columns={'MAŠINA / DATUM': 'MAŠINA'})
         df.columns = [col.strftime('%d.%m.%Y') if isinstance(col, datetime) else str(col) for col in df.columns]
         
-        # 2. 🚀 POPRAVLJENA DOPUNA: Proveravamo oba naziva fajla (sa š i sa s) da sigurno povučemo Kipera
-        fajl_zivih_masina = ""
+        fajl_zivih_masine = ""
         if os.path.exists('spisak_mašina.csv'):
-            fajl_zivih_masina = 'spisak_mašina.csv'
+            fajl_zivih_masine = 'spisak_mašina.csv'
         elif os.path.exists('spisak_masina.csv'):
-            fajl_zivih_masina = 'spisak_masina.csv'
+            fajl_zivih_masine = 'spisak_masina.csv'
             
-        if fajl_zivih_masina != "":
+        if fajl_zivih_masine != "":
             try:
                 df_zive_masine = pd.read_csv(fajl_zivih_masina)
                 for _, red in df_zive_masine.iterrows():
                     gb = str(red['GARAŽNI BROJ']).strip()
                     tip = str(red['TIP MAŠINE']).strip()
-                    
-                    # Proveravamo da li ta mašina već postoji na spisku
                     postojeci_gb = df['ID MAŠINE'].astype(str).str.strip().values
                     if gb not in postojeci_gb:
-                        # Pravimo novi čist red za novu mašinu (sve ćelije u kalendaru ostaju prazne)
                         novi_red = {'MAŠINA': tip, 'ID MAŠINE': gb}
                         for col in df.columns:
                             if col not in ['MAŠINA', 'ID MAŠINE']:
@@ -39,27 +34,33 @@ def prikazi_raspored(fajl_baze):
                 pass
         
         danasnji_str = datetime.now().strftime('%d.%m.%Y')
+        trenutna_godina = datetime.now().strftime('%Y')
+        
+        st.write("### 📅 Filter kalendara")
+        meseci = ["Januar", "Februar", "Mart", "April", "Maj", "Jun", "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar"]
+        trenutni_mesec_idx = datetime.now().month - 1
+        izabrani_mesec = st.selectbox("Izaberi mesec za prikaz:", meseci, index=trenutni_mesec_idx, key="filter_mes_rasp_nov")
+        
+        mesec_broj_str = str(meseci.index(izabrani_mesec) + 1).zfill(2)
+        ekstenzija_meseca = f".{mesec_broj_str}.{trenutna_godina}"
         
         sve_kolone = list(df.columns)
         osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
-        kalendarske_kolone = [c for c in sve_kolone if c not in osnovne_kolone]
+        kalendarske_kolone = [c for c in sve_kolone if c.endswith(ekstenzija_meseca)]
         
-        # 3. 🎯 AUTOMATSKO CENTRIRANJE NA DANAŠNJI DAN
         if danasnji_str in kalendarske_kolone:
             idx = kalendarske_kolone.index(danasnji_str)
             poredjane_kolone = osnovne_kolone + kalendarske_kolone[max(0, idx-2):] + kalendarske_kolone[:max(0, idx-2)]
         else:
-            poredjane_kolone = sve_kolone
+            poredjane_kolone = osnovne_kolone + kalendarske_kolone
 
         konfiguracija_kolona = {
             "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True),
             "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True)
         }
-        
         if danasnji_str in poredjane_kolone:
             konfiguracija_kolona[danasnji_str] = st.column_config.TextColumn(f"🚨 {danasnji_str} (DANAS) 🚨")
 
-        # Prikazujemo brzu tabelu sa uključenim novim kiperom na dnu
         st.dataframe(
             df,
             use_container_width=True,
@@ -67,4 +68,4 @@ def prikazi_raspored(fajl_baze):
             column_config=konfiguracija_kolona
         )
     else:
-        st.error("Glavni Excel fajl 'plan.xlsm' nije pronađen u fascikli.")
+        st.error("Glavni Excel fajl 'plan.xlsm' nije pronađen.")
