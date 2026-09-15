@@ -8,9 +8,9 @@ st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 # Glavni naslov sajta
 st.title("🚜 Operativni izveštaji mehanizacije")
 
-# Bočni meni sa leve strane
+# Bočni meni sa leve strane - DODATI NOSIOCI
 st.sidebar.header("Meni sa modulima")
-modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A"])
+modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A", "NOSIOCI"])
 
 fajl_baze = 'plan.xlsm'
 
@@ -50,7 +50,6 @@ elif modul == "SPISAK RADNIKA":
             st.rerun()
     st.write("")
     
-    # Sakrivamo i email i tip da spisak radnika bude maksimalno čist
     prikaz_df = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
     st.dataframe(prikaz_df, use_container_width=True)
 
@@ -58,20 +57,13 @@ elif modul == "ZAMENA":
     st.write("## 🔄 Spisak i evidencija zamena")
     if os.path.exists(fajl_baze):
         df_zamena = pd.read_excel(fajl_baze, sheet_name='ZAMENA')
-        
-        # 1. Menjamo engleske nazive kolona u srpske na ekranu
-        prevod_kolona = {
-            'START DATUM': 'DATUM POČETKA',
-            'END DATUM': 'DATUM ZAVRŠETKA'
-        }
+        prevod_kolona = {'START DATUM': 'DATUM POČETKA', 'END DATUM': 'DATUM ZAVRŠETKA'}
         df_zamena = df_zamena.rename(columns=prevod_kolona)
         
-        # 2. Čistimo sate i nule da ostanu samo čisti dani
         if 'DATUM POČETKA' in df_zamena.columns:
             df_zamena['DATUM POČETKA'] = pd.to_datetime(df_zamena['DATUM POČETKA']).dt.date
         if 'DATUM ZAVRŠETKA' in df_zamena.columns:
             df_zamena['DATUM ZAVRŠETKA'] = pd.to_datetime(df_zamena['DATUM ZAVRŠETKA']).dt.date
-            
     else:
         df_zamena = pd.DataFrame(columns=['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'ZAMENA'])
 
@@ -82,7 +74,6 @@ elif modul == "ZAMENA":
         if st.button("Sačuvaj zamenu"):
             st.success("Zamena uneta!")
             st.rerun()
-            
     st.write("")
     st.dataframe(df_zamena, use_container_width=True)
 
@@ -107,3 +98,22 @@ elif modul == "PRIMALAC MAIL-A":
             st.warning("Kolona 'EMAIL ADRESA' nije pronađena u šitu.")
     else:
         st.error("Fajl sa podacima nije dostupan.")
+
+# ---> NOVI MODUL: NOSIOCI <---
+elif modul == "NOSIOCI":
+    st.write("## 🔑 Zaduženja mehanizacije - Nosioci")
+    if os.path.exists(fajl_baze):
+        df_nosioci = pd.read_excel(fajl_baze, sheet_name='NOSIOCI')
+    else:
+        df_nosioci = pd.DataFrame(columns=['PREZIME I IME', 'GARAŽNI BROJ'])
+
+    with st.popover("➕ Dodaj novog nosioca"):
+        st.write("### Unesi podatke o zaduženju")
+        radnik_unos = st.text_input("Prezime i ime radnika:")
+        gb_unos = st.text_input("Garažni broj mašine:")
+        if st.button("Sačuvaj zaduženje"):
+            st.success("Zaduženje uneto!")
+            st.rerun()
+            
+    st.write("")
+    st.dataframe(df_nosioci, use_container_width=True)
