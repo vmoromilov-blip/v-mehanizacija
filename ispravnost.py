@@ -4,7 +4,6 @@ import os
 from datetime import datetime
 
 def prikazi_ispravnost(fajl_baze):
-    
     fajl_csv = "ispravnost_baza.csv"
     trenutna_godina = datetime.now().strftime('%Y')
     danasnji_str = datetime.now().strftime('%d.%m.%Y')
@@ -46,17 +45,13 @@ def prikazi_ispravnost(fajl_baze):
         except:
             pass
 
-    # --- ⚙️ KONTROLNA DUGMAD: POTPUNO VIDLJIVA I SIGURNA ---
-    col_izbor, col_projektuj = st.columns(2)
+    # --- NOVI RASPORED: TRI USKE I SKRAĆENE KOLONE U ISTOJ LINIJI ---
+    col_dugme, col_razmak, col_mesec = st.columns([2, 5, 2])
     
-    with col_izbor:
-        meseci = ["Januar", "Februar", "Mart", "April", "Maj", "Jun", "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar"]
-        trenutni_mesec_idx = datetime.now().month - 1
-        izabrani_mesec = st.selectbox("Izaberi mesec za prikaz:", meseci, index=trenutni_mesec_idx)
-    
-    with col_projektuj:
-        with st.popover("⚙️ Projektuj ispravnost do kraja godine"):
-            st.write("### Unesi status i prenesi ga automatski na sve naredne dane")
+    with col_dugme:
+        # Dugme ISPRAVNOST ide skroz levo sa velikim slovima
+        with st.popover("⚙️ ISPRAVNOST"):
+            st.write("### Projektuj ispravnost do kraja godine")
             p_masina = st.selectbox("Izaberi mašinu (ID):", df['ID MAŠINE'].dropna().unique(), key="proj_mas")
             p_datum = st.date_input("Od datuma:", datetime.now().date(), key="proj_dat")
             p_status = st.radio("Status za prenos:", ["DA", "NE", "MIR", "VIK"], horizontal=True, key="proj_stat")
@@ -73,6 +68,12 @@ def prikazi_ispravnost(fajl_baze):
                         df.to_csv(fajl_csv, index=False)
                         st.success("Uspešno projektovano!")
                         st.rerun()
+
+    with col_mesec:
+        # Izbor meseca (kalendar) ide skroz desno
+        meseci = ["Januar", "Februar", "Mart", "April", "Maj", "Jun", "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar"]
+        trenutni_mesec_idx = datetime.now().month - 1
+        izabrani_mesec = st.selectbox("Izaberi mesec:", meseci, index=trenutni_mesec_idx, label_visibility="collapsed")
 
     st.write("")
     
@@ -96,7 +97,6 @@ def prikazi_ispravnost(fajl_baze):
         naziv_zaglavlja = f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col
         konfiguracija_kolona[col] = st.column_config.SelectboxColumn(naziv_zaglavlja, options=["DA", "NE", "MIR", "VIK"], required=True)
 
-    # Pokrećemo tabelu koja fabrički koristi 100% kontejnera
     st.data_editor(
         df,
         use_container_width=True,
