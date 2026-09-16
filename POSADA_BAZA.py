@@ -5,15 +5,27 @@ import os
 def prikazi_posadu(fajl_baze):
     fajl_csv = "POSADA_BAZA.csv"
     
+    # 🚀 AUTOMATSKO REFIKSIRANJE: Brišemo stari CSV iz memorije ako u njemu kolone nisu dobro poređane
+    if os.path.exists(fajl_csv):
+        try:
+            df_test = pd.read_csv(fajl_csv)
+            if 'PREZIME I IME' not in df_test.columns or df_test.empty:
+                os.remove(fajl_csv)
+        except:
+            os.remove(fajl_csv)
+    
+    # Ako fajl ne postoji, pravimo ga ponovo potpuno čistog iz Excela
     if not os.path.exists(fajl_csv) or os.path.getsize(fajl_csv) == 0:
         if os.path.exists(fajl_baze):
             try:
                 df = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
-                # Prisilno menjamo nazive kolona u bazi na cista slova da ne puca
-                df = df.rename(columns={'PREZIME I IME': 'PREZIME I IME'})
+                # Prisilno čistimo i osiguravamo nazive tri glavne kolone
+                df.columns = [str(c).strip() for c in df.columns]
+                df = df[['SAP BROJ', 'PREZIME I IME', 'STATUS']].copy()
                 df.to_csv(fajl_csv, index=False)
             except:
                 df = pd.DataFrame(columns=['SAP BROJ', 'PREZIME I IME', 'STATUS'])
+                df.to_csv(fajl_csv, index=False)
         else:
             df = pd.DataFrame(columns=['SAP BROJ', 'PREZIME I IME', 'STATUS'])
             df.to_csv(fajl_csv, index=False)
@@ -23,9 +35,7 @@ def prikazi_posadu(fajl_baze):
     except:
         return
 
-    if 'EMAIL ADRESA' in df.columns:
-        df = df.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
-
+    # Čist fabrički popover prozorčić za dodavanje rukovalaca
     with st.popover("➕ DODAJ RADNIKA"):
         st.write("### Unesi novog radnika u sistem")
         novo_ime = st.text_input("Prezime i ime radnika:")
@@ -40,30 +50,17 @@ def prikazi_posadu(fajl_baze):
                     
     st.write("")
 
-    # Konfiguracija kolona bez ijednog slova sa kvacicom u kodnim komandama
-    konfig_kolona = {
-        "SAP BROJ": st.column_config.TextColumn(
-            "SAP BROJ", 
-            pinned=True,     
-            width="small"
-        ),
-        "PREZIME I IME": st.column_config.TextColumn(
-            "PREZIME I IME", 
-            width="large"    
-        ),
-        "STATUS": st.column_config.TextColumn(
-            "STATUS", 
-            width="medium"
-        )
-    }
-
-    # Pokrecemo stabilan editor sa cistim engleskim slovima u kljucu
+    # 🎯 MAKSIMALNO SIGURNA KONFIGURACIJA BEZ I JEDNE ZAMKE ZA PYTHON
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
         num_rows="dynamic",
-        column_config=konfig_kolona,
-        key="zivi_editor_radnika_final"
+        column_config={
+            "SAP BROJ": st.column_config.TextColumn("SAP BROJ", pinned=True, width="small"),
+            "PREZIME I IME": st.column_config.TextColumn("PREZIME I IME", width="large"),
+            "STATUS": st.column_config.TextColumn("STATUS", width="medium")
+        },
+        key="zivi_editor_radnika_finalni_sigurni"
     )
     
     if izmenjeni_df is not None and not izmenjeni_df.equals(df):
