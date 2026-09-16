@@ -3,29 +3,16 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# UVOZIMO NAŠE KRUPNE PODFASCIKLE
+# UVOZIMO NAŠE MODULE IZ POSEBNIH FIOKA
 from GARAŽNA_BAZA import prikazi_garazu
 from POSADA_BAZA import prikazi_posadu
 from ispravnost import prikazi_ispravnost
 from raspored import prikazi_raspored
 
+# Podešavamo sajt da fabrički uvek koristi maksimalnu širinu ekrana
 st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 
-# Magija za maksimalan vidik: Sklanjamo prazan prostor i fabričke naslove
-st.markdown("""
-    <style>
-        .block-container {
-            padding-top: 0rem !important;
-            padding-bottom: 0rem !important;
-        }
-        .stHeading {
-            display: none !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
 st.sidebar.header("MENI SA MODULIMA")
-# PROMENJENO IME IZ "POSADA" U "SPISAK VOZAČA" ZA LEVI MENI
 modul = st.sidebar.radio("IZABERI MODUL:", ["POČETNA", "GARAŽA", "SPISAK VOZAČA", "ZAMENA", "NOSIOCI", "ISPRAVNOST", "RASPORED"])
 
 fajl_baze = 'plan.xlsm'
@@ -38,7 +25,6 @@ elif modul == "GARAŽA":
     prikazi_garazu(fajl_baze)
 
 elif modul == "SPISAK VOZAČA":
-    # Pozivamo funkciju za prikaz vozača pod novim komandnim imenom
     prikazi_posadu(fajl_baze)
 
 elif modul == "ZAMENA":
