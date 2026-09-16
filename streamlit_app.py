@@ -7,20 +7,8 @@ from datetime import datetime
 from ispravnost import prikazi_ispravnost
 from raspored import prikazi_raspored
 
+# Podešavamo sajt da fabrički uvek bude maksimalno širok preko celog ekrana
 st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
-
-# 🚀 POPRAVLJENO STILIZOVANJE: Sklanjamo prazan prostor i naslove, ali ČUVAMO popover dugmiće!
-st.markdown("""
-    <style>
-        .block-container {
-            padding-top: 0rem !important;
-            padding-bottom: 0rem !important;
-        }
-        .stHeading {
-            display: none !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 st.sidebar.header("Meni sa modulima")
 modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A", "NOSIOCI", "ISPRAVNOST", "RASPORED"])
@@ -54,8 +42,8 @@ elif modul == "SPISAK MAŠINA":
     col1, col2 = st.columns(2)
     with col1:
         with st.popover("➕ Dodaj mašinu"):
-            novi_tip = st.text_input("Tip mašine (npr. BAGER):")
-            novi_gb = st.text_input("Garažni broj (npr. GB4760):")
+            novi_tip = st.text_input("Tip mašine:")
+            novi_gb = st.text_input("Garažni broj:")
             if st.button("Sačuvaj mašinu"):
                 if novi_tip and novi_gb:
                     novi_red = pd.DataFrame([{'TIP MAŠINE': novi_tip.upper(), 'GARAŽNI BROJ': novi_gb.upper()}])
@@ -63,9 +51,6 @@ elif modul == "SPISAK MAŠINA":
                     sacuvaj_bazu(df_masine, 'SPISAK MAŠINA')
                     st.success("Mašina upisana!")
                     st.rerun()
-    with col2:
-        if st.button("🗑️ Obriši selektovane mašine"):
-            st.info("Štiklirajte redove levo u tabeli i pritisnite ikonicu kante u tabeli ispod.")
     st.write("")
     edited_df = st.data_editor(df_masine, use_container_width=True, num_rows="dynamic", key="editor_masine")
     if edited_df is not None and not edited_df.equals(df_masine):
@@ -75,8 +60,6 @@ elif modul == "SPISAK MAŠINA":
 elif modul == "SPISAK RADNIKA":
     st.write("## 👥 Spisak zaposlenih radnika")
     df_radnici = ucitaj_ili_napravi_bazu('SPISAK RADNIKA', ['SAP BROJ', 'PREZIME I IME', 'STATUS'])
-    if 'EMAIL ADRESA' in df_radnici.columns:
-        df_radnici = df_radnici.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
     col1, col2 = st.columns(2)
     with col1:
         with st.popover("➕ Dodaj radnika"):
@@ -89,9 +72,6 @@ elif modul == "SPISAK RADNIKA":
                     sacuvaj_bazu(df_radnici, 'SPISAK RADNIKA')
                     st.success("Radnik upisan!")
                     st.rerun()
-    with col2:
-        if st.button("🗑️ Obriši selektovane radnike"):
-            st.info("Štiklirajte kućicu levo pored radnika i upotrebite ikonicu kante u tabeli ispod.")
     st.write("")
     edited_df = st.data_editor(df_radnici, use_container_width=True, num_rows="dynamic", key="editor_radnici")
     if edited_df is not None and not edited_df.equals(df_radnici):
@@ -113,72 +93,36 @@ elif modul == "ZAMENA":
             z_smena = st.text_input("Smena:")
             lista_radnika = sorted(df_svi_radnici['PREZIME I IME'].dropna().unique())
             z_odsutan = st.selectbox("Izaberi odsutnog radnika:", lista_radnika)
-            z_zamena = st.selectbox("Izaberi radnika koji menja (ZAMENA):", lista_radnika)
+            z_zamena = st.selectbox("Izaberi radnika koji menja:", lista_radnika)
             z_pocetak = st.date_input("Datum početka:")
             z_zavrsetak = st.date_input("Datum završetka:")
             if st.button("Sačuvaj zamenu"):
                 sap_odsutnog = df_svi_radnici[df_svi_radnici['PREZIME I IME'] == z_odsutan]['SAP BROJ'].values
                 sap_zamene = df_svi_radnici[df_svi_radnici['PREZIME I IME'] == z_zamena]['SAP BROJ'].values
-                br_odsutan = sap_odsutnog if len(sap_odsutnog) > 0 else ""
-                br_zamena = sap_zamene if len(sap_zamene) > 0 else ""
-                kolone_u_bazi = list(df_zamena.columns)
-                sap_ods_col = 'SAP BROJ' if 'SAP BROJ' in kolone_u_bazi else kolone_u_bazi
-                sap_zam_col = 'SAP BROJ.1' if 'SAP BROJ.1' in kolone_u_bazi else kolone_u_bazi
                 novi_red = pd.DataFrame([{
                     'ID MAŠINE': z_id.upper(), 'SMENA': z_smena.upper(),
-                    'ODSUTAN RADNIK': z_odsutan, sap_ods_col: br_odsutan,
+                    'ODSUTAN RADNIK': z_odsutan, 'SAP BROJ': sap_odsutnog[0] if len(sap_odsutnog)>0 else "",
                     'DATUM POČETKA': str(z_pocetak), 'DATUM ZAVRŠETKA': str(z_zavrsetak), 
-                    sap_zam_col: br_zamena, 'ZAMENA': z_zamena
+                    'SAP BROJ.1': sap_zamene[0] if len(sap_zamene)>0 else "", 'ZAMENA': z_zamena
                 }])
                 df_zamena = pd.concat([df_zamena, novi_red], ignore_index=False)
                 sacuvaj_bazu(df_zamena, 'ZAMENA')
                 st.success("Zamena upisana!")
                 st.rerun()
-    with col2:
-        if st.button("🗑️ Obriši selektovane zamene"):
-            st.info("Štiklirajte redove levo u tabeli i upotrebite ikonicu kante u tabeli ispod.")
     st.write("")
-    edited_df = st.data_editor(df_zamena, use_container_width=True, num_rows="dynamic", key="editor_zamena")
-    if edited_df is not None and not edited_df.equals(df_zamena):
-        sacuvaj_bazu(edited_df, 'ZAMENA')
-        st.rerun()
+    st.data_editor(df_zamena, use_container_width=True, num_rows="dynamic", key="editor_zamena")
 
 elif modul == "PRIMALAC MAIL-A":
     st.write("## 📧 Ljudi kojima se šalje izveštaj")
-    if os.path.exists(fajl_baze):
-        df_radnici = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
-        if 'EMAIL ADRESA' in df_radnici.columns:
-            df_mail = df_radnici[df_radnici['EMAIL ADRESA'].notna() & (df_radnici['EMAIL ADRESA'] != '')]
-            kolone_za_prikaz = [col for col in ['EMAIL ADRESA', 'TIP'] if col in df_mail.columns]
-            st.data_editor(df_mail[kolone_za_prikaz], use_container_width=True, num_rows="dynamic", key="editor_mail")
+    df_radnici = ucitaj_ili_napravi_bazu('SPISAK RADNIKA', ['SAP BROJ', 'PREZIME I IME', 'STATUS'])
+    if 'EMAIL ADRESA' in df_radnici.columns:
+        df_mail = df_radnici[df_radnici['EMAIL ADRESA'].notna() & (df_radnici['EMAIL ADRESA'] != '')]
+        st.data_editor(df_mail[['EMAIL ADRESA', 'TIP']], use_container_width=True, num_rows="dynamic", key="editor_mail")
 
 elif modul == "NOSIOCI":
     st.write("## 🔑 Zaduženja mehanizacije - Nosioci")
     df_nosioci = ucitaj_ili_napravi_bazu('NOSIOCI', ['ID MAŠINE', 'TIP TURNUSA', 'DATUM POČETKA', 'SMENA', 'SAP BROJ', 'NOSILAC'])
-    df_nosioci = df_nosioci.rename(columns={'START DATUM': 'DATUM POČETKA'})
-    col1, col2 = st.columns(2)
-    with col1:
-        with st.popover("➕ Dodaj nosioca"):
-            novi_id = st.text_input("Garažni broj mašine (ID MAŠINE):")
-            novi_turnus = st.text_input("Tip turnusa:")
-            nova_smena = st.text_input("Smena:")
-            novi_sap_br = st.text_input("SAP Broj:")
-            novi_nosilac_ime = st.text_input("Prezime i ime radnika:")
-            if st.button("Sačuvaj zaduženje"):
-                novi_red = pd.DataFrame([{
-                    'ID MAŠINE': novi_id.upper(), 'TIP TURNUSA': novi_turnus,
-                    'DATUM POČETKA': datetime.now().strftime('%Y-%m-%d'), 'SMENA': nova_smena.upper(),
-                    'SAP BROJ': novi_sap_br, 'NOSILAC': novi_nosilac_ime.upper()
-                }])
-                df_nosioci = pd.concat([df_nosioci, novi_red], ignore_index=False)
-                sacuvaj_bazu(df_nosioci, 'NOSIOCI')
-                st.success("Zaduženje upisano!")
-                st.rerun()
-    st.write("")
-    edited_df = st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
-    if edited_df is not None and not edited_df.equals(df_nosioci):
-        sacuvaj_bazu(edited_df, 'NOSIOCI')
-        st.rerun()
+    st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
 
 elif modul == "ISPRAVNOST":
     prikazi_ispravnost(fajl_baze)
