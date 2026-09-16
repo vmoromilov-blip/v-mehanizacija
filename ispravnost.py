@@ -8,7 +8,9 @@ def prikazi_ispravnost(fajl_baze):
     
     fajl_csv = "ispravnost_baza.csv"
     trenutna_godina = datetime.now().strftime('%Y')
+    danasnji_str = datetime.now().strftime('%d.%m.%Y')
     
+    # Ako fajl ne postoji, ili ako je pukao i ostao potpuno prazan
     if not os.path.exists(fajl_csv) or os.path.getsize(fajl_csv) == 0:
         if os.path.exists(fajl_baze):
             df = pd.read_excel(fajl_baze, sheet_name='ISPRAVNOST')
@@ -16,7 +18,7 @@ def prikazi_ispravnost(fajl_baze):
             df.columns = [col.strftime('%d.%m.%Y') if isinstance(col, datetime) else str(col) for col in df.columns]
             df.to_csv(fajl_csv, index=False)
         else:
-            st.error("Fajl 'plan.xlsm' nije pronađen.")
+            st.error("Glavni Excel fajl 'plan.xlsm' nije pronađen.")
             return
 
     try:
@@ -25,7 +27,53 @@ def prikazi_ispravnost(fajl_baze):
         return
         
     df = df.fillna('DA')
-    danasnji_str = datetime.now().strftime('%d.%m.%Y')
+    
+    # --- 🚀 ROBUSTNA AUTOMATIKA: DODAVANJE NOVIH MAŠINA SA PLUSIĆA (KIPER VM) ---
+    fajl_zivih = 'spisak_mašina.csv' if os.path.exists('spisak_mašina.csv') else ('spisak_masina.csv' if os.path.exists('spisak_masina.csv') else '')
+    if fajl_zivih != "":
+        try:
+            df_zive_masine = pd.read_csv(fajl_zivih)
+            for _, red in df_zive_masine.iterrows():
+                gb = str(red['GARAŽNI BROJ']).strip()
+                tip = str(red['TIP MAŠINE']).strip()
+                
+                # Proveravamo da li garažni broj već postoji u kalendaru ispravnosti
+                postojeci_gb = df['ID MAŠINE'].astype(str).str.strip().values
+                if gb not in postojeci_gb:
+                    # Pravimo novi red za novu mašinu i punimo ceo kalendar sa "DA"
+                    novi_red = {'MAŠINA': tip, 'ID MAŠINE': gb}
+                    for col in df.columns:
+                        if col not in ['MAŠINA', 'ID MAŠINE']:
+                            novi_red[col] = 'DA'
+                    df = pd.concat([df, pd.DataFrame([novi_red])], ignore_index=True)
+            df.to_csv(fajl_csv, index=False)
+        except:
+            pass
+    # -------------------------------------------------------------------------
+
+    # --- ⚙️ VRAĆAMO DUGME ZA PROJEKTOVANJE ISPRAVNOSTI DO KRAJA GODINE ---
+    with st.popover("⚙️ Grupna promena (Projektuj do kraja godine)"):
+        st.write("### Unesi status i prenesi ga automatski na sve naredne dane")
+        izabrana_masina = st.selectbox("Izaberi mašinu (ID):", df['ID MAŠINE'].dropna().unique())
+        datum_promene = st.date_input("Izaberi datum od kog projektuješ:", datetime.now().date())
+        datum_promene_str = datum_promene.strftime('%d.%m.%Y')
+        novi_status = st.radio("Status za projektovanje:", ["DA", "NE", "MIR", "VIK"], horizontal=True)
+        
+        if st.button("Sačuvaj i projektuj trajno"):
+            if datum_promene_str in df.columns:
+                idx = df[df['ID MAŠINE'].astype(str).str.strip() == str(izabrana_masina).strip()].index
+                if not idx.empty:
+                    sve_kolone = list(df.columns)
+                    start_idx = sve_kolone.index(datum_promene_str)
+                    # Menjamo izabrani datum i sve datume udesno do 31. decembra!
+                    for c in sve_kolone[start_idx:]:
+                        df.loc[idx, c] = novi_status
+                    df.to_csv(fajl_csv, index=False)
+                    st.success("Status uspešno i trajno projektovan do kraja godine!")
+                    st.rerun()
+            else:
+                st.error(f"Izabrani datum {datum_promene_str} se ne nalazi u kalendaru.")
+    st.write("")
     
     st.write("### 📅 Filter kalendara")
     meseci = ["Januar", "Februar", "Mart", "April", "Maj", "Jun", "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar"]
@@ -60,6 +108,8 @@ def prikazi_ispravnost(fajl_baze):
         key="editor_ispravnosti_brzi"
     )
     
-    if izmenjeni_df is not None and not izmenjeni_df.equals(df):
-        izmenjeni_df.to_csv(fajl_csv, index=False)
-        st.rerun()
+    if izmenjeni_df is not None:
+        osnovni_df = pd.DataFrame(izmenjeni_df.values, columns=df.columns)
+        if not osnovni_df.equals(df):
+            osnovni_df.to_csv(fajl_csv, index=False)
+            st.rerun()
