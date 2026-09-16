@@ -38,7 +38,7 @@ def prikazi_posadu(fajl_baze):
                     
     st.write("")
 
-    # 🎯 TRAJNO CEMENTIRAMO PIN I ŠIRINU KOLONA ZA VOZAČE
+    # 🎯 POPRAVLJENO SLOVO C - PIN I ŠIRINA SU SADA ZAKLJUČANI ZAUVEK
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
@@ -46,19 +46,19 @@ def prikazi_posadu(fajl_baze):
         column_config={
             "SAP BROJ": st.column_config.TextColumn(
                 "SAP BROJ", 
-                pinned=True,     # TRAJNI PIN ZA PRVU KOLONU!
+                pinned=True,     
                 width="small"
             ),
             "PREZIME I IME": st.column_config.TextColumn(
                 "PREZIME I IME", 
-                width="large"    # DAJEMO VELIKU ŠIRINU DA IMENA NE BUDU ODSEČENA
+                width="large"    
             ),
             "STATUS": st.column_config.TextColumn(
                 "STATUS", 
                 width="medium"
             )
         },
-        key="zivi_editor_vozača"
+        key="zivi_editor_vozaca"
     )
     
     if izmenjeni_df is not None and not izmenjeni_df.equals(df):
