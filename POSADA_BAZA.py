@@ -5,7 +5,7 @@ import os
 def prikazi_posadu(fajl_baze):
     fajl_csv = "POSADA_BAZA.csv"
     
-    # Čitamo iz Excela samo ako fajl već ne postoji u memoriji
+    # Ako fajl u memoriji ne postoji, pravimo ga iz Excela
     if not os.path.exists(fajl_csv) or os.path.getsize(fajl_csv) == 0:
         if os.path.exists(fajl_baze):
             try:
@@ -23,6 +23,15 @@ def prikazi_posadu(fajl_baze):
     except:
         return
 
+    # --- 🧼 HIRURŠKO ČIŠĆENJE VIŠKOVA I UPISIVANJE REČI "AKTIVAN" ---
+    # 1. Prisno izbacujemo neželjene kolone iz prikaza
+    kolone_za_izbacivanje = ['EMAIL ADRESA', 'TIP', 'Unnamed: 3']
+    df = df.drop(columns=[c for c in kolone_za_izbacivanje if c in df.columns], errors='ignore')
+    
+    # 2. Ako kolona STATUS postoji, punimo je rečju AKTIVAN, ako ne postoji - pravimo je!
+    df['STATUS'] = 'AKTIVAN'
+    # -----------------------------------------------------------------
+
     # Čisto dugme na samom vrhu ekrana
     with st.popover("➕ DODAJ RADNIKA"):
         st.write("### Unesi novog radnika u sistem")
@@ -30,7 +39,11 @@ def prikazi_posadu(fajl_baze):
         novi_sap = st.text_input("SAP broj radnika:")
         if st.button("SAČUVAJ U VOZAČE"):
             if novo_ime:
-                novi_red = pd.DataFrame([{'SAP BROJ': novi_sap.strip(), 'PREZIME I IME': novo_ime.upper().strip(), 'STATUS': 'AKTIVAN'}])
+                novi_red = pd.DataFrame([{
+                    'SAP BROJ': novi_sap.strip(), 
+                    'PREZIME I IME': novo_ime.upper().strip(), 
+                    'STATUS': 'AKTIVAN'
+                }])
                 df = pd.concat([df, novi_red], ignore_index=True)
                 df.to_csv(fajl_csv, index=False)
                 st.success("Radnik uspešno upisan!")
@@ -38,7 +51,7 @@ def prikazi_posadu(fajl_baze):
                     
     st.write("")
 
-    # Čista i brza tabela bez ikakvih teških i rizičnih parametara koji ruše sajt
+    # Čista i brza tabela bez ikakvih rizičnih parametara koji ruše sajt
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
