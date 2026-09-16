@@ -3,7 +3,6 @@ import pandas as pd
 import os
 
 def prikazi_garazu(fajl_baze):
-    # Standardni fabrički prikaz visoke stabilnosti - raširen preko celog ekrana
     fajl_csv = "GARAZA_BAZA.csv"
     
     if not os.path.exists(fajl_csv) or os.path.getsize(fajl_csv) == 0:
@@ -22,7 +21,6 @@ def prikazi_garazu(fajl_baze):
     except:
         return
 
-    # Čisto fabričko dugme na samom vrhu ekrana - nikada više neće pobeći u oblake
     with st.popover("➕ DODAJ VOZILO"):
         st.write("### Unesi novo vozilo u sistem")
         novi_tip = st.text_input("Tip vozila (npr. KIPER, BAGER):")
@@ -37,11 +35,22 @@ def prikazi_garazu(fajl_baze):
                     
     st.write("")
 
-    # Tabela zacementirana da uvek koristi maksimalnu širinu ekrana
+    # 🎯 TRAJNO CEMENTIRAMO PIN I ŠIRINU KOLONA ZA GARAŽU
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
         num_rows="dynamic",
+        column_config={
+            "TIP MAŠINE": st.column_config.TextColumn(
+                "TIP MAŠINE", 
+                pinned=True,     # OVO JE TRAJNI PIN!
+                width="medium"   # KOMFORNA ŠIRINA DA SE SVE VIDI
+            ),
+            "GARAŽNI BROJ": st.column_config.TextColumn(
+                "GARAŽNI BROJ", 
+                width="medium"
+            )
+        },
         key="zivi_editor_garaze"
     )
     
