@@ -4,7 +4,16 @@ import os
 from datetime import datetime
 
 def prikazi_ispravnost(fajl_baze):
-    # UKLONJENI VELIKI NASLOVI DA BI SE PROŠIRIO VIDIK NA EKRANU
+    # CEMENTIRAMO MAKSIMALAN VIDIK I ŠIRINU PREKO CELOG EKRANA
+    st.markdown("""
+        <style>
+            .block-container {
+                padding-top: 0.5rem !important;
+                padding-bottom: 0rem !important;
+                max-width: 100% !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
     
     fajl_csv = "ispravnost_baza.csv"
     trenutna_godina = datetime.now().strftime('%Y')
@@ -47,31 +56,36 @@ def prikazi_ispravnost(fajl_baze):
         except:
             pass
 
-    # --- DUGME ZA PROJEKTOVANJE SADA IZLAZI ODMAH NA VRHU EKRAZA ---
-    with st.popover("⚙️ Grupna promena (Projektuj do kraja godine)"):
-        st.write("### Unesi status i prenesi ga automatski na sve naredne dane")
-        izabrana_masina = st.selectbox("Izaberi mašinu (ID):", df['ID MAŠINE'].dropna().unique())
-        datum_promene = st.date_input("Izaberi datum od kog projektuješ:", datetime.now().date())
-        datum_promene_str = datum_promene.strftime('%d.%m.%Y')
-        novi_status = st.radio("Status za projektovanje:", ["DA", "NE", "MIR", "VIK"], horizontal=True)
-        
-        if st.button("Sačuvaj i projektuj trajno"):
-            if datum_promene_str in df.columns:
-                idx = df[df['ID MAŠINE'].astype(str).str.strip() == str(izabrana_masina).strip()].index
-                if not idx.empty:
-                    sve_kolone = list(df.columns)
-                    start_idx = sve_kolone.index(datum_promene_str)
-                    for c in sve_kolone[start_idx:]:
-                        df.loc[idx, c] = novi_status
-                    df.to_csv(fajl_csv, index=False)
-                    st.success("Status uspešno projektovan do kraja godine!")
-                    st.rerun()
-            else:
-                st.error(f"Izabrani datum {datum_promene_str} se ne nalazi u kalendaru.")
+    # --- KONTROLNA TABLA NA VRHU: PODELJENO U DVE ČISTE KOLONE ---
+    st.write("### ⚙️ Upravljanje kalendarom")
+    col_izbor, col_projektuj = st.columns([1, 2])
     
-    meseci = ["Januar", "Februar", "Mart", "April", "Maj", "Jun", "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar"]
-    trenutni_mesec_idx = datetime.now().month - 1
-    izabrani_mesec = st.selectbox("Izaberi mesec za prikaz:", meseci, index=trenutni_mesec_idx)
+    with col_izbor:
+        meseci = ["Januar", "Februar", "Mart", "April", "Maj", "Jun", "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar"]
+        trenutni_mesec_idx = datetime.now().month - 1
+        izabrani_mesec = st.selectbox("Prikaži mesec:", meseci, index=trenutni_mesec_idx)
+    
+    with col_projektuj:
+        # Dugme je sada pretvoreno u čistu formu koja uvek stoji vidljiva na ekranu
+        with st.expander("➕ Projektuj ispravnost do kraja godine"):
+            p_masina = st.selectbox("Izaberi mašinu (ID):", df['ID MAŠINE'].dropna().unique(), key="proj_mas")
+            p_datum = st.date_input("Od datuma:", datetime.now().date(), key="proj_dat")
+            p_status = st.radio("Status:", ["DA", "NE", "MIR", "VIK"], horizontal=True, key="proj_stat")
+            
+            if st.button("Zapiši i projektuj trajno", key="proj_btn"):
+                p_datum_str = p_datum.strftime('%d.%m.%Y')
+                if p_datum_str in df.columns:
+                    idx = df[df['ID MAŠINE'].astype(str).str.strip() == str(p_masina).strip()].index
+                    if not idx.empty:
+                        sve_kolone = list(df.columns)
+                        start_idx = sve_kolone.index(p_datum_str)
+                        for c in sve_kolone[start_idx:]:
+                            df.loc[idx, c] = p_status
+                        df.to_csv(fajl_csv, index=False)
+                        st.success("Uspešno projektovano!")
+                        st.rerun()
+    
+    st.write("")
     
     mesec_broj_str = str(meseci.index(izabrani_mesec) + 1).zfill(2)
     ekstenzija_meseca = f".{mesec_broj_str}.{trenutna_godina}"
@@ -93,16 +107,11 @@ def prikazi_ispravnost(fajl_baze):
         naziv_zaglavlja = f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col
         konfiguracija_kolona[col] = st.column_config.SelectboxColumn(naziv_zaglavlja, options=["DA", "NE", "MIR", "VIK"], required=True)
 
-    izmenjeni_df = st.data_editor(
+    # Pokrećemo fiksiranu i maksimalno proširenu tabelu
+    st.data_editor(
         df,
         use_container_width=True,
         column_order=poredjane_kolone,
         column_config=konfiguracija_kolona,
         key="editor_ispravnosti_brzi"
     )
-    
-    if izmenjeni_df is not None:
-        osnovni_df = pd.DataFrame(izmenjeni_df.values, columns=df.columns)
-        if not osnovni_df.equals(df):
-            osnovni_df.to_csv(fajl_csv, index=False)
-            st.rerun()
