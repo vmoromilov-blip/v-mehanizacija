@@ -4,27 +4,7 @@ import os
 from datetime import datetime
 
 def prikazi_ispravnost(fajl_baze):
-    # 🎯 FIKSIRANJE I CEMENTIRANJE POGLEDA: Zaključavamo širinu ekrana na 100%, ali vraćamo prostor iznad dugmadi da se vide cela
-    st.markdown("""
-        <style>
-            /* Glavni kontejner se širi od ivice do ivice */
-            .main .block-container {
-                max-width: 100% !important;
-                padding-left: 0.5rem !important;
-                padding-right: 0.5rem !important;
-                padding-top: 1.5rem !important; /* Spuštamo dugmad malo nadole da ih ekran ne seče */
-                padding-bottom: 0rem !important;
-            }
-            /* Trajno sakrivanje svih nepotrebnih naslova */
-            .stHeading, h1, h2, h3 {
-                display: none !important;
-            }
-            /* Širimo i sam editor tabele na maksimalni vidik */
-            .stDataEditor {
-                width: 100% !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
+    st.write("## 🛠️ Dnevna ispravnost mehanizacije")
     
     fajl_csv = "ispravnost_baza.csv"
     trenutna_godina = datetime.now().strftime('%Y')
@@ -67,20 +47,20 @@ def prikazi_ispravnost(fajl_baze):
         except:
             pass
 
-    # --- PAKOVANJE DUGMADI: Čist i ravan vojnički niz bez sečenja ---
-    col_izbor, col_projektuj = st.columns([1, 2]) # Dajemo više prostora dugmetu za projektovanje
+    # --- ⚙️ KONTROLNA DUGMAD: POTPUNO VIDLJIVA I SIGURNA ---
+    col_izbor, col_projektuj = st.columns(2)
     
     with col_izbor:
         meseci = ["Januar", "Februar", "Mart", "April", "Maj", "Jun", "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar"]
         trenutni_mesec_idx = datetime.now().month - 1
-        izabrani_mesec = st.selectbox("Prikaži mesec:", meseci, index=trenutni_mesec_idx, label_visibility="collapsed")
+        izabrani_mesec = st.selectbox("Izaberi mesec za prikaz:", meseci, index=trenutni_mesec_idx)
     
     with col_projektuj:
         with st.popover("⚙️ Projektuj ispravnost do kraja godine"):
             st.write("### Unesi status i prenesi ga automatski na sve naredne dane")
             p_masina = st.selectbox("Izaberi mašinu (ID):", df['ID MAŠINE'].dropna().unique(), key="proj_mas")
             p_datum = st.date_input("Od datuma:", datetime.now().date(), key="proj_dat")
-            p_status = st.radio("Status:", ["DA", "NE", "MIR", "VIK"], horizontal=True, key="proj_stat")
+            p_status = st.radio("Status za prenos:", ["DA", "NE", "MIR", "VIK"], horizontal=True, key="proj_stat")
             
             if st.button("Zapiši i projektuj trajno", key="proj_btn"):
                 p_datum_str = p_datum.strftime('%d.%m.%Y')
@@ -94,7 +74,7 @@ def prikazi_ispravnost(fajl_baze):
                         df.to_csv(fajl_csv, index=False)
                         st.success("Uspešno projektovano!")
                         st.rerun()
-    
+
     st.write("")
     
     mesec_broj_str = str(meseci.index(izabrani_mesec) + 1).zfill(2)
@@ -117,7 +97,7 @@ def prikazi_ispravnost(fajl_baze):
         naziv_zaglavlja = f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col
         konfiguracija_kolona[col] = st.column_config.SelectboxColumn(naziv_zaglavlja, options=["DA", "NE", "MIR", "VIK"], required=True)
 
-    # Pokrećemo automatski zaključanu, maksimalno široku tabelu od ivice do ivice
+    # Pokrećemo tabelu koja fabrički koristi 100% kontejnera
     st.data_editor(
         df,
         use_container_width=True,
