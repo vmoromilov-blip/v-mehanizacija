@@ -9,20 +9,18 @@ from raspored import prikazi_raspored
 
 st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 
-# 🚀 MAGIJA ZA MAKSIMALAN VIDIK: Preko CSS-a brišemo prazan prostor (margine) na vrhu ekrana
+# 🚀 POPRAVLJENO STILIZOVANJE: Sklanjamo prazan prostor i naslove, ali ČUVAMO popover dugmiće!
 st.markdown("""
     <style>
         .block-container {
             padding-top: 0rem !important;
             padding-bottom: 0rem !important;
         }
-        h1 {
+        .stHeading {
             display: none !important;
         }
     </style>
 """, unsafe_allow_html=True)
-
-# UKLONJEN NASLOV "Operativni izveštaji mehanizacije" DA BI SE PROŠIRILA TABELA
 
 st.sidebar.header("Meni sa modulima")
 modul = st.sidebar.radio("Izaberi modul:", ["Početna", "SPISAK MAŠINA", "SPISAK RADNIKA", "ZAMENA", "PRIMALAC MAIL-A", "NOSIOCI", "ISPRAVNOST", "RASPORED"])
@@ -121,11 +119,11 @@ elif modul == "ZAMENA":
             if st.button("Sačuvaj zamenu"):
                 sap_odsutnog = df_svi_radnici[df_svi_radnici['PREZIME I IME'] == z_odsutan]['SAP BROJ'].values
                 sap_zamene = df_svi_radnici[df_svi_radnici['PREZIME I IME'] == z_zamena]['SAP BROJ'].values
-                br_odsutan = sap_odsutnog[0] if len(sap_odsutnog) > 0 else ""
-                br_zamena = sap_zamene[0] if len(sap_zamene) > 0 else ""
+                br_odsutan = sap_odsutnog if len(sap_odsutnog) > 0 else ""
+                br_zamena = sap_zamene if len(sap_zamene) > 0 else ""
                 kolone_u_bazi = list(df_zamena.columns)
-                sap_ods_col = 'SAP BROJ' if 'SAP BROJ' in kolone_u_bazi else kolone_u_bazi[3]
-                sap_zam_col = 'SAP BROJ.1' if 'SAP BROJ.1' in kolone_u_bazi else kolone_u_bazi[6]
+                sap_ods_col = 'SAP BROJ' if 'SAP BROJ' in kolone_u_bazi else kolone_u_bazi
+                sap_zam_col = 'SAP BROJ.1' if 'SAP BROJ.1' in kolone_u_bazi else kolone_u_bazi
                 novi_red = pd.DataFrame([{
                     'ID MAŠINE': z_id.upper(), 'SMENA': z_smena.upper(),
                     'ODSUTAN RADNIK': z_odsutan, sap_ods_col: br_odsutan,
