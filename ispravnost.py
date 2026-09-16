@@ -4,7 +4,6 @@ import os
 from datetime import datetime
 
 def prikazi_ispravnost(fajl_baze):
-    st.write("## 🛠️ Dnevna ispravnost mehanizacije")
     
     fajl_csv = "ispravnost_baza.csv"
     trenutna_godina = datetime.now().strftime('%Y')
