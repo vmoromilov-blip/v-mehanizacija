@@ -6,21 +6,21 @@ from datetime import datetime
 def prikazi_zamenu(fajl_baze):
     fajl_csv = "zamena.csv"
     
-    # Ako živa baza u fascikli još ne postoji, pravimo je iz Excela
+    # 1. Čitamo iz Excela samo ako fajl već ne postoji u memoriji (LEČI TREPTANJE!)
     if not os.path.exists(fajl_csv) or os.path.getsize(fajl_csv) == 0:
         if os.path.exists(fajl_baze):
             try:
                 df = pd.read_excel(fajl_baze, sheet_name='ZAMENA')
-                # Prilagođavamo datume da odmah budu u lepom formatu
+                # Sređujemo datume na samom startu
                 for col in ['DATUM POČETKA', 'DATUM ZAVRŠETKA', 'START DATUM', 'END DATUM']:
                     if col in df.columns:
                         df[col] = pd.to_datetime(df[col]).dt.strftime('%d.%m.%Y')
                 df = df.rename(columns={'START DATUM': 'DATUM POČETKA', 'END DATUM': 'DATUM ZAVRŠETKA'})
                 df.to_csv(fajl_csv, index=False)
             except:
-                df = pd.DataFrame(columns=['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'SAP BROJ', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'SAP BROJ.1', 'ZAMENA'])
+                df = pd.DataFrame(columns=['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'ID BROJ', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'ID BROJ 2', 'ZAMENA'])
         else:
-            df = pd.DataFrame(columns=['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'SAP BROJ', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'SAP BROJ.1', 'ZAMENA'])
+            df = pd.DataFrame(columns=['ID MAŠINE', 'SMENA', 'ODSUTAN RADNIK', 'ID BROJ', 'DATUM POČETKA', 'DATUM ZAVRŠETKA', 'ID BROJ 2', 'ZAMENA'])
             df.to_csv(fajl_csv, index=False)
 
     try:
@@ -28,9 +28,23 @@ def prikazi_zamenu(fajl_baze):
     except:
         return
 
+    # --- VOJNIČKO PREIMENOVANJE KOLONA PREMA DIKTATU ---
+    df = df.rename(columns={
+        'SAP BROJ': 'ID BROJ',
+        'SAP BROJ.1': 'ID BROJ 2',
+        'SAP BROJ2': 'ID BROJ 2',
+        'ID BROJ.1': 'ID BROJ 2'
+    })
+
+    # --- HIRURŠKO ČIŠĆENJE ZAREZA I DECIMALA (.0) NA CELOJ TABELI ---
+    for col in ['ID BROJ', 'ID BROJ 2']:
+        if col in df.columns:
+            # Pretvaramo u tekst, čistimo zarez i brišemo decimalnu nulu na kraju
+            df[col] = df[col].astype(str).str.replace(r'\.0$', '', regex=True).str.replace('nan', '').str.strip()
+
     df = df.fillna('')
 
-    # Učitavamo živu listu radnika i mašina iz ostalih fascikli za padajuće menije
+    # Učitavamo živu listu radnika i mašina za padajuće menije
     opcije_radnika = [""]
     if os.path.exists('POSADA_BAZA.csv'):
         try:
@@ -49,67 +63,64 @@ def prikazi_zamenu(fajl_baze):
         except:
             pass
 
-    # --- KONTROLNO DUGME SKROZ LEVO U ISTOJ LINIJI ---
-    col_dugme, col_prazno = st.columns(2)
-    
-    with col_dugme:
-        with st.popover("🔄 DODAJ ZAMENU"):
-            st.write("### Unesi novu vojnu naredbu o zameni")
-            z_id = st.selectbox("Izaberi garažni broj mašine:", opcije_masina)
-            z_smena = st.radio("Smena:", ["A", "B"], horizontal=True)
-            z_odsutan = st.selectbox("Izaberi odsutnog radnika:", opcije_radnika)
-            z_zamena = st.selectbox("Izaberi radnika koji ga menja (ZAMENA):", opcije_radnika)
-            z_pocetak = st.date_input("Datum početka zamene:")
-            z_zavrsetak = st.date_input("Datum završetka zamene:")
-            
-            if st.button("UPREGLI I SAČUVAJ ZAMENU"):
-                if z_id and z_odsutan and z_zamena:
-                    # Izvlačimo sap brojeve automatski iz posade da ih ne kucaš pešaka
-                    sap_odsutnog = ""
-                    sap_zamene = ""
-                    if os.path.exists('POSADA_BAZA.csv'):
-                        df_r = pd.read_csv('POSADA_BAZA.csv')
-                        s1 = df_r[df_r['PREZIME I IME'] == z_odsutan]['SAP BROJ'].values
-                        s2 = df_r[df_r['PREZIME I IME'] == z_zamena]['SAP BROJ'].values
-                        sap_odsutnog = str(s1[0]) if len(s1) > 0 else ""
-                        sap_zamene = str(s2[0]) if len(s2) > 0 else ""
+    # --- POPRAVLJENO DUGME NA VRHU: SVE RADI TRENUTNO ---
+    with st.popover("🔄 DODAJ ZAMENU"):
+        st.write("### Unesi novu vojnu naredbu o zameni")
+        z_id = st.selectbox("Izaberi garažni broj mašine:", opcije_masina)
+        z_smena = st.radio("Smena:", ["A", "B"], horizontal=True)
+        z_odsutan = st.selectbox("Izaberi odsutnog radnika:", opcije_radnika)
+        z_zamena = st.selectbox("Izaberi radnika koji ga menja (ZAMENA):", opcije_radnika)
+        z_pocetak = st.date_input("Datum početka zamene:")
+        z_zavrsetak = st.date_input("Datum završetka zamene:")
+        
+        if st.button("UPREGLI I SAČUVAJ ZAMENU"):
+            if z_id and z_odsutan and z_zamena:
+                sap_odsutnog = ""
+                sap_zamene = ""
+                # Automatski povlačimo ID brojeve iz vozača bez decimala
+                if os.path.exists('POSADA_BAZA.csv'):
+                    df_r = pd.read_csv('POSADA_BAZA.csv')
+                    s1 = df_r[df_r['PREZIME I IME'] == z_odsutan]['SAP BROJ'].values
+                    s2 = df_r[df_r['PREZIME I IME'] == z_zamena]['SAP BROJ'].values
+                    sap_odsutnog = str(int(s1[0])) if len(s1) > 0 and pd.notna(s1[0]) else ""
+                    sap_zamene = str(int(s2[0])) if len(s2) > 0 and pd.notna(s2[0]) else ""
 
-                    novi_red = pd.DataFrame([{
-                        'ID MAŠINE': str(z_id).strip().upper(),
-                        'SMENA': str(z_smena).strip().upper(),
-                        'ODSUTAN RADNIK': z_odsutan,
-                        'SAP BROJ': sap_odsutnog,
-                        'DATUM POČETKA': z_pocetak.strftime('%d.%m.%Y'),
-                        'DATUM ZAVRŠETKA': z_zavrsetak.strftime('%d.%m.%Y'),
-                        'SAP BROJ.1': sap_zamene,
-                        'ZAMENA': z_zamena
-                    }])
-                    df = pd.concat([df, novi_red], ignore_index=True)
-                    df.to_csv(fajl_csv, index=False)
-                    st.success("Zamena uspešno zavedena u sistem!")
-                    st.rerun()
-                    
+                novi_red = pd.DataFrame([{
+                    'ID MAŠINE': str(z_id).strip().upper(),
+                    'SMENA': str(z_smena).strip().upper(),
+                    'ODSUTAN RADNIK': z_odsutan,
+                    'ID BROJ': sap_odsutnog,
+                    'DATUM POČETKA': z_pocetak.strftime('%d.%m.%Y'),
+                    'DATUM ZAVRŠETKA': z_zavrsetak.strftime('%d.%m.%Y'),
+                    'ID BROJ 2': sap_zamene,
+                    'ZAMENA': z_zamena
+                }])
+                df = pd.concat([df, novi_red], ignore_index=True)
+                df.to_csv(fajl_csv, index=False)
+                st.success("Zamena uspešno zavedena!")
+                st.rerun()
+                
     st.write("")
 
-    # Konfiguracija za komforan pregled i padajuće menije na dvoklik unutar ćelija
+    # Konfiguracija kolona sa novim imenima i zaključanim pinom
     konfig = {
         "ID MAŠINE": st.column_config.SelectboxColumn("ID MAŠINE", options=opcije_masina, pinned=True, width="small"),
         "SMENA": st.column_config.SelectboxColumn("SMENA", options=["A", "B"], width="small"),
         "ODSUTAN RADNIK": st.column_config.SelectboxColumn("ODSUTAN RADNIK", options=opcije_radnika, width="medium"),
-        "SAP BROJ": st.column_config.TextColumn("SAP BROJ", width="small", disabled=True),
+        "ID BROJ": st.column_config.TextColumn("ID BROJ", width="small", disabled=True),
         "DATUM POČETKA": st.column_config.TextColumn("DATUM POČETKA", width="medium"),
         "DATUM ZAVRŠETKA": st.column_config.TextColumn("DATUM ZAVRŠETKA", width="medium"),
-        "SAP BROJ.1": st.column_config.TextColumn("SAP BROJ.1", width="small", disabled=True),
+        "ID BROJ 2": st.column_config.TextColumn("ID BROJ 2", width="small", disabled=True),
         "ZAMENA": st.column_config.SelectboxColumn("ZAMENA", options=opcije_radnika, width="medium")
     }
 
-    # Prikazujemo fiksiranu, široku tabelu zamena od ivice do ivice
+    # Prikazujemo fiksiranu, široku tabelu zamena bez treptanja i zareza
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
         num_rows="dynamic",
         column_config=konfig,
-        key="zivi_editor_zamena_finalni"
+        key="zivi_editor_zamena_finalni_mirni"
     )
     
     if izmenjeni_df is not None and not izmenjeni_df.equals(df):
