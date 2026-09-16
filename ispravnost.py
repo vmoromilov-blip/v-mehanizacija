@@ -4,24 +4,24 @@ import os
 from datetime import datetime
 
 def prikazi_ispravnost(fajl_baze):
-    # 🎯 BRUTALNO CEMENTIRANJE VIDIKA: Širimo sajt na 100% širine od ivice do ivice ekrana i brišemo sve naslove trajno
+    # 🎯 FIKSIRANJE I CEMENTIRANJE POGLEDA: Zaključavamo širinu ekrana na 100%, ali vraćamo prostor iznad dugmadi da se vide cela
     st.markdown("""
         <style>
-            /* Širenje glavnog kontejnera na 100% širine ekrana */
+            /* Glavni kontejner se širi od ivice do ivice */
             .main .block-container {
                 max-width: 100% !important;
                 padding-left: 0.5rem !important;
                 padding-right: 0.5rem !important;
-                padding-top: 0rem !important;
+                padding-top: 1.5rem !important; /* Spuštamo dugmad malo nadole da ih ekran ne seče */
                 padding-bottom: 0rem !important;
             }
-            /* Sakrivanje svih fabričkih naslova i viškova prostora */
+            /* Trajno sakrivanje svih nepotrebnih naslova */
             .stHeading, h1, h2, h3 {
                 display: none !important;
             }
-            /* Dodatno stezanje praznog prostora iznad tabele */
-            div.block-container {
-                padding-top: 0.5rem !important;
+            /* Širimo i sam editor tabele na maksimalni vidik */
+            .stDataEditor {
+                width: 100% !important;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -67,13 +67,13 @@ def prikazi_ispravnost(fajl_baze):
         except:
             pass
 
-    # --- LEPŠA I KORPAKTNIJA DUGMAD U ISTOJ LINIJI ---
-    col_izbor, col_projektuj = st.columns([1, 2])
+    # --- PAKOVANJE DUGMADI: Čist i ravan vojnički niz bez sečenja ---
+    col_izbor, col_projektuj = st.columns([1, 2]) # Dajemo više prostora dugmetu za projektovanje
     
     with col_izbor:
         meseci = ["Januar", "Februar", "Mart", "April", "Maj", "Jun", "Jul", "Avgust", "Septembar", "Oktobar", "Novembar", "Decembar"]
         trenutni_mesec_idx = datetime.now().month - 1
-        izabrani_mesec = st.selectbox("Mesec:", meseci, index=trenutni_mesec_idx, label_visibility="collapsed")
+        izabrani_mesec = st.selectbox("Prikaži mesec:", meseci, index=trenutni_mesec_idx, label_visibility="collapsed")
     
     with col_projektuj:
         with st.popover("⚙️ Projektuj ispravnost do kraja godine"):
@@ -95,6 +95,8 @@ def prikazi_ispravnost(fajl_baze):
                         st.success("Uspešno projektovano!")
                         st.rerun()
     
+    st.write("")
+    
     mesec_broj_str = str(meseci.index(izabrani_mesec) + 1).zfill(2)
     ekstenzija_meseca = f".{mesec_broj_str}.{trenutna_godina}"
     
@@ -115,7 +117,7 @@ def prikazi_ispravnost(fajl_baze):
         naziv_zaglavlja = f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col
         konfiguracija_kolona[col] = st.column_config.SelectboxColumn(naziv_zaglavlja, options=["DA", "NE", "MIR", "VIK"], required=True)
 
-    # Pokrećemo fiksiranu, maksimalno široku tabelu uz samu gornju ivicu ekrana
+    # Pokrećemo automatski zaključanu, maksimalno široku tabelu od ivice do ivice
     st.data_editor(
         df,
         use_container_width=True,
