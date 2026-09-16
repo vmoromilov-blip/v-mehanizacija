@@ -1,16 +1,16 @@
-import streamlit as st
+import streamlit st as st
 import pandas as pd
 import os
 
 def prikazi_garazu(fajl_baze):
-    # Cementiramo vidik od ivice do ivice ekrana i sklanjamo sve naslove
+    # Fiksiramo pogled: Tabela ide od ivice do ivice ekrana, a dugme spuštamo malo nadole da ga ekran ne seče
     st.markdown("""
         <style>
             .main .block-container {
                 max-width: 100% !important;
                 padding-left: 0.5rem !important;
                 padding-right: 0.5rem !important;
-                padding-top: 1.5rem !important;
+                padding-top: 1.5rem !important; /* Spušteno sa 0 na 1.5 da dugme izađe iz oblaka */
                 padding-bottom: 0rem !important;
             }
             .stHeading, h1, h2, h3 {
@@ -21,7 +21,6 @@ def prikazi_garazu(fajl_baze):
 
     fajl_csv = "GARAZA_BAZA.csv"
     
-    # Ako živa baza u fascikli još ne postoji, pravimo je inicijalno iz Excela
     if not os.path.exists(fajl_csv) or os.path.getsize(fajl_csv) == 0:
         if os.path.exists(fajl_baze):
             try:
@@ -38,8 +37,8 @@ def prikazi_garazu(fajl_baze):
     except:
         return
 
-    # --- NOVO VELIKO DUGME SKROZ LEVO U ISTOJ LINIJI ---
-    col_dugme, col_prazno = st.columns([1, 3])
+    # Dugmad lepa i skraćena skroz na levoj strani
+    col_dugme, col_prazno = st.columns(2)
     
     with col_dugme:
         with st.popover("➕ DODAJ VOZILO"):
@@ -56,7 +55,7 @@ def prikazi_garazu(fajl_baze):
                     
     st.write("")
 
-    # Prikazujemo fiksiranu tabelu od ivice do ivice sa opcijom brisanja (štikliranje + kanta na tabeli)
+    # Tabela zacementirana od ivice do ivice
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
