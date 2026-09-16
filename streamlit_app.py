@@ -10,20 +10,8 @@ from ZAMENA_BAZA import prikazi_zamenu
 from ispravnost import prikazi_ispravnost
 from raspored import prikazi_raspored
 
+# Podešavamo sajt da fabrički uvek koristi maksimalnu širinu ekrana
 st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
-
-# Magija za maksimalan vidik: Sklanjamo prazan prostor i fabričke naslove
-st.markdown("""
-    <style>
-        .block-container {
-            padding-top: 0rem !important;
-            padding-bottom: 0rem !important;
-        }
-        .stHeading {
-            display: none !important;
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 st.sidebar.header("MENI SA MODULIMA")
 modul = st.sidebar.radio("IZABERI MODUL:", ["POČETNA", "GARAŽA", "SPISAK VOZAČA", "ZAMENA", "NOSIOCI", "ISPRAVNOST", "RASPORED"])
@@ -41,7 +29,6 @@ elif modul == "SPISAK VOZAČA":
     prikazi_posadu(fajl_baze)
 
 elif modul == "ZAMENA":
-    # Pozivamo našu novu, čistu i stabilnu fioku Zamena
     prikazi_zamenu(fajl_baze)
 
 elif modul == "NOSIOCI":
