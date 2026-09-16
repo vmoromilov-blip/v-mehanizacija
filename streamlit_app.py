@@ -7,10 +7,10 @@ from datetime import datetime
 from GARAŽNA_BAZA import prikazi_garazu
 from POSADA_BAZA import prikazi_posadu
 from ZAMENA_BAZA import prikazi_zamenu
+from NOSIOCI_BAZA import prikazi_nosioce
 from ispravnost import prikazi_ispravnost
 from raspored import prikazi_raspored
 
-# Podešavamo sajt da fabrički uvek koristi maksimalnu širinu ekrana
 st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 
 st.sidebar.header("MENI SA MODULIMA")
@@ -32,10 +32,8 @@ elif modul == "ZAMENA":
     prikazi_zamenu(fajl_baze)
 
 elif modul == "NOSIOCI":
-    st.write("## 🔑 Zaduženja mehanizacije - Nosioci")
-    if os.path.exists(fajl_baze):
-        df_nosioci = pd.read_excel(fajl_baze, sheet_name='NOSIOCI')
-        st.data_editor(df_nosioci, use_container_width=True, num_rows="dynamic", key="editor_nosioci")
+    # Pozivamo našu novu, čistu i stabilnu fioku Nosioci
+    prikazi_nosioce(fajl_baze)
 
 elif modul == "ISPRAVNOST":
     prikazi_ispravnost(fajl_baze)
