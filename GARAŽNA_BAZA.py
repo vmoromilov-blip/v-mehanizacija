@@ -1,4 +1,4 @@
-import streamlit st as st
+import streamlit as st
 import pandas as pd
 import os
 
@@ -10,7 +10,7 @@ def prikazi_garazu(fajl_baze):
                 max-width: 100% !important;
                 padding-left: 0.5rem !important;
                 padding-right: 0.5rem !important;
-                padding-top: 1.5rem !important; /* Spušteno sa 0 na 1.5 da dugme izađe iz oblaka */
+                padding-top: 1.5rem !important;
                 padding-bottom: 0rem !important;
             }
             .stHeading, h1, h2, h3 {
