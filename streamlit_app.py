@@ -3,14 +3,27 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# UVOZIMO NAŠE MODULE IZ POSEBNIH FIOKA
+# UVOZIMO NAŠE KRUPNE PODFASCIKLE
 from GARAŽNA_BAZA import prikazi_garazu
 from POSADA_BAZA import prikazi_posadu
+from ZAMENA_BAZA import prikazi_zamenu
 from ispravnost import prikazi_ispravnost
 from raspored import prikazi_raspored
 
-# Podešavamo sajt da fabrički uvek koristi maksimalnu širinu ekrana
 st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
+
+# Magija za maksimalan vidik: Sklanjamo prazan prostor i fabričke naslove
+st.markdown("""
+    <style>
+        .block-container {
+            padding-top: 0rem !important;
+            padding-bottom: 0rem !important;
+        }
+        .stHeading {
+            display: none !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 st.sidebar.header("MENI SA MODULIMA")
 modul = st.sidebar.radio("IZABERI MODUL:", ["POČETNA", "GARAŽA", "SPISAK VOZAČA", "ZAMENA", "NOSIOCI", "ISPRAVNOST", "RASPORED"])
@@ -28,10 +41,8 @@ elif modul == "SPISAK VOZAČA":
     prikazi_posadu(fajl_baze)
 
 elif modul == "ZAMENA":
-    st.write("## 🔄 Spisak i evidencija zamena")
-    if os.path.exists(fajl_baze):
-        df_zamena = pd.read_excel(fajl_baze, sheet_name='ZAMENA')
-        st.data_editor(df_zamena, use_container_width=True, num_rows="dynamic", key="editor_zamena")
+    # Pozivamo našu novu, čistu i stabilnu fioku Zamena
+    prikazi_zamenu(fajl_baze)
 
 elif modul == "NOSIOCI":
     st.write("## 🔑 Zaduženja mehanizacije - Nosioci")
