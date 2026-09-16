@@ -26,7 +26,6 @@ def prikazi_posadu(fajl_baze):
         if os.path.exists(fajl_baze):
             try:
                 df = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
-                df = df.rename(columns={'PREZIME I IME': 'PREZIME I IME'})
                 df.to_csv(fajl_csv, index=False)
             except:
                 df = pd.DataFrame(columns=['SAP BROJ', 'PREZIME I IME', 'STATUS'])
@@ -43,8 +42,8 @@ def prikazi_posadu(fajl_baze):
     if 'EMAIL ADRESA' in df.columns:
         df = df.drop(columns=['EMAIL ADRESA', 'TIP', 'Unnamed: 3'], errors='ignore')
 
-    # --- NOVO VELIKO DUGME SKROZ LEVO U ISTOJ LINIJI ---
-    col_dugme, col_prazno = st.columns()
+    # --- POPRAVLJENO: UPIŠAN BROJ 2 ZA KOLONE SKROZ LEVO ---
+    col_dugme, col_prazno = st.columns(2)
     
     with col_dugme:
         with st.popover("➕ DODAJ RADNIKA"):
@@ -61,7 +60,7 @@ def prikazi_posadu(fajl_baze):
                     
     st.write("")
 
-    # Prikazujemo fiksiranu tabelu od ivice do ivice sa živim data_editorom
+    # Prikazujemo fiksiranu tabelu od ivice do ivice
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
