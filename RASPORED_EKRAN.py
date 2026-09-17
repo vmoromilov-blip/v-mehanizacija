@@ -44,11 +44,12 @@ def prikazi_raspored(fajl_baze):
         try:
             df = pd.read_csv(fajl_zivi_raspored)
             df = df.fillna('')
-            # Osiguravamo da su sve kolone i nove mašine iz matematike uvek tu
+            
+            # Osiguravamo sinhronizaciju mašina iz baze mehanizacije
             df['ID MAŠINE'] = df['ID MAŠINE'].astype(str).str.strip().str.upper()
             df_matematika['ID MAŠINE'] = df_matematika['ID MAŠINE'].astype(str).str.strip().str.upper()
             
-            for _, red in df_matematika.iterrows():
+            for idx, red in df_matematika.iterrows():
                 m_id = red['ID MAŠINE']
                 if m_id not in df['ID MAŠINE'].values:
                     df = pd.concat([df, pd.DataFrame([red])], ignore_index=True)
@@ -83,7 +84,6 @@ def prikazi_raspored(fajl_baze):
     for col in dani:
         if col in df.columns:
             if len(opcije_radnika) > 1:
-                # 🎯 ĆELIJE SU SADA OTKLJUČANE I IMAJU PADAJUĆE MENIJE ZA IZBOR VOZAČA
                 konfiguracija_kolona[col] = st.column_config.SelectboxColumn(
                     f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col,
                     options=opcije_radnika,
@@ -101,9 +101,9 @@ def prikazi_raspored(fajl_baze):
         key="zivi_editor_troslojnog_rasporeda_otkljucani"
     )
     
-    # 🎯 ŽIVI I TRAJNI UPIS: Čim prstom promeniš vozača na telefonu, sajt to odmah trajno zaključava unutra!
+    # 🎯 STOPRSTOTNO POPRAVLJEN I BEZBEDAN ŽIVI UPIS BEZ KOČENJA I MOTANJA
     if izmenjeni_df is not None:
         osnovni_df = pd.DataFrame(izmenjeni_df.values, columns=df.columns)
-        if not osnow_df := osnovni_df.equals(df):
+        if not osnovni_df.equals(df):
             osnovni_df.to_csv(fajl_zivi_raspored, index=False)
             st.rerun()
