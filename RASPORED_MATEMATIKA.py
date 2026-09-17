@@ -4,15 +4,15 @@ from datetime import datetime, timedelta
 from nosioci import izracunaj_aktivnog_nosioca
 
 def izracunaj_troslojni_raspored(fajl_baze):
-    # 1. Pravimo prozor od 10 operativnih dana (5 unazad, danas, 4 unapred)
+    # 1. Pravimo prozor od TAČNO 10 operativnih dana (5 unazad, danas, 4 unapred)
     danas = datetime.now()
     dani_dt = []
     for i in range(-5, 5):
         dani_dt.append(danas + timedelta(days=i))
         
-    # 🎯 SREĐIVANJE DATUMA: Sortiramo datume vojnički od najstarijeg ka najnovijem
+    # Sortiramo ih strogo hronološki da datumi idu prirodno sleva nadesno
     dani_dt.sort()
-    dani = [d.strftime('%d.%m.%Y') for d in dani_dt]
+    dani = [d.strftime('%d.%m.%Y') if isinstance(d, datetime) else str(d) for d in dani_dt]
         
     # 2. Brzo čitanje osnovne strukture mašina iz Garaže
     if os.path.exists('GARAZA_BAZA.csv'):
@@ -26,20 +26,19 @@ def izracunaj_troslojni_raspored(fajl_baze):
     else:
         return pd.DataFrame(), dani
 
-    # Pravimo kolone za operativne dane u tačnom hronološkom redosledu
+    # Pravimo kolone SAMO za ovih 10 operativnih dana (Svi ostali dani su obrisani!)
     for dan in dani:
         df_final[dan] = ""
 
-    # 🎯 SLOJ 1: Pametno preračunavanje aktivnog nosioca za SVAKI DAN POJEDINAČNO (A/B smena)
+    # SLOJ 1: Proračun aktivnih nosilaca iz turnusa za ovih 10 dana
     for dan in dani:
-        # Pozivamo tvoj turnus motor iz nosioci.py koji zna ko tačno radi tog dana
         nosioci_za_dan = izracunaj_aktivnog_nosioca(fajl_baze, dan)
         for idx, red in df_final.iterrows():
             m_id = str(red['ID MAŠINE']).strip().upper()
             if m_id in nosioci_za_dan:
                 df_final.at[idx, dan] = str(nosioci_za_dan[m_id]).upper().strip()
 
-    # SLOJ 2: Filter ispravnosti (Brišemo vozača ako je mašina u kvaru, leži ili je vikend)
+    # SLOJ 2: Filter ispravnosti (Brišemo ljude ako mašina leži ili je u kvaru)
     if os.path.exists('ispravnost_baza.csv'):
         try:
             df_isp = pd.read_csv('ispravnost_baza.csv')
@@ -50,13 +49,13 @@ def izracunaj_troslojni_raspored(fajl_baze):
                         m_id = str(red['ID MAŠINE']).strip().upper()
                         status_red = df_isp[df_isp['ID MAŠINE'] == m_id]
                         if not status_red.empty:
-                            trenutni_status = str(status_red[dan].values[0]).strip().upper()
+                            trenutni_status = str(status_red[dan].values).strip().upper()
                             if trenutni_status in ['NE', 'MIR', 'VIK']:
                                 df_final.at[idx, dan] = ""
         except:
             pass
 
-    # SLOJ 3: Vojna naredba iz Zamena (Prebrisavanje gotovih ćelija realnim stanjem)
+    # SLOJ 3: Vojna naredba iz Zamena (Prebrisavanje ćelija realnim stanjem na terenu)
     if os.path.exists('zamena.csv'):
         try:
             df_zam = pd.read_csv('zamena.csv')
