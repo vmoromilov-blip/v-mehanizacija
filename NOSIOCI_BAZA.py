@@ -6,6 +6,7 @@ from datetime import datetime
 def prikazi_nosioce(fajl_baze):
     fajl_csv = "nosioci_baza.csv"
     
+    # Ako živa baza u fascikli još ne postoji, pravimo je iz Excela
     if not os.path.exists(fajl_csv) or os.path.getsize(fajl_csv) == 0:
         if os.path.exists(fajl_baze):
             try:
@@ -34,6 +35,7 @@ def prikazi_nosioce(fajl_baze):
 
     df = df.fillna('')
 
+    # Učitavamo spiskove za padajuće menije
     opcije_radnika = [""]
     if os.path.exists('POSADA_BAZA.csv'):
         try:
@@ -52,8 +54,9 @@ def prikazi_nosioce(fajl_baze):
         except:
             pass
 
+    # --- KRUPNO OBLAČNO DUGME NA VRHU ---
     with st.popover("🔑 DODAJ NOSIOCA"):
-        st.write("### Unesi novo stalno zaduženje mehanizacije")
+        st.write("### Unesi novo zaduženje mehanizacije")
         n_id = st.selectbox("Izaberi garažni broj mašine:", opcije_masina, key="nos_id")
         n_turnus = st.selectbox("Tip turnusa (Način rada):", ["1", "5", "7", "15", "30"], key="nos_tur")
         n_smena = st.radio("Smena:", ["A", "B"], horizontal=True, key="nos_sme")
@@ -71,17 +74,17 @@ def prikazi_nosioce(fajl_baze):
                     except:
                         id_br = str(s) if len(s) > 0 else ""
 
-                novi_red = pd.DataFrame([{
+                novi_red = {
                     'ID MAŠINE': str(n_id).strip().upper(),
                     'TIP TURNUSA': str(n_turnus),
                     'START DATUM': n_datum.strftime('%d.%m.%Y'),
                     'SMENA': str(n_smena).strip().upper(),
                     'ID BROJ': id_br,
                     'NOSILAC': n_radnik
-                }])
-                df = pd.concat([df, novi_red], ignore_index=True)
+                }
+                df = pd.concat([df, pd.DataFrame([novi_red])], ignore_index=True)
                 df.to_csv(fajl_csv, index=False)
-                st.success("Zaduženje uspešno upisano!")
+                st.success("Zaduženje upisano u fasciklu!")
                 st.rerun()
 
     st.write("")
@@ -90,7 +93,8 @@ def prikazi_nosioce(fajl_baze):
         if col in df.columns:
             df[col] = df[col].astype(str).str.replace(r'\.0$', '', regex=True).str.replace('nan', '').str.strip()
 
-    st.data_editor(
+    # 🎯 POTPUNO OTKLJUČANA I ŠIROKA TABELA OD IVICE DO IVICE EKRANA
+    izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
         num_rows="dynamic",
@@ -99,8 +103,12 @@ def prikazi_nosioce(fajl_baze):
             "TIP TURNUSA": st.column_config.SelectboxColumn("TIP TURNUSA", options=["1", "5", "7", "15", "30"], width="small"),
             "START DATUM": st.column_config.TextColumn("START DATUM", width="medium"),
             "SMENA": st.column_config.SelectboxColumn("SMENA", options=["A", "B"], width="small"),
-            "ID BROJ": st.column_config.TextColumn("ID BROJ", width="small", disabled=True),
+            "ID BROJ": st.column_config.TextColumn("ID BROJ", width="small"),
             "NOSILAC": st.column_config.SelectboxColumn("NOSILAC", options=opcije_radnika, width="large")
         },
-        key="zivi_editor_nosilaca_finalni"
+        key="zivi_editor_nosilaca_finalni_otkljucani"
     )
+    
+    if izmenjeni_df is not None and not izmenjeni_df.equals(df):
+        izmenjeni_df.to_csv(fajl_csv, index=False)
+        st.rerun()
