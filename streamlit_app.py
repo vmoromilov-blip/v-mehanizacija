@@ -8,7 +8,7 @@ from GARAŽNA_BAZA import prikazi_garazu
 from POSADA_BAZA import prikazi_posadu
 from ZAMENA_BAZA import prikazi_zamenu
 from NOSIOCI_BAZA import prikazi_nosioce
-from ispravnost import prikazi_ispravnost
+from ISPRAVNOST_EKRAN import prikazi_ispravnost
 from raspored import prikazi_raspored
 
 st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
