@@ -6,36 +6,40 @@ from nosioci import izracunaj_aktivnog_nosioca
 def izracunaj_troslojni_raspored(fajl_baze):
     # 1. Pravimo prozor od 10 operativnih dana (5 unazad, danas, 4 unapred)
     danas = datetime.now()
-    dani = []
+    dani_dt = []
     for i in range(-5, 5):
-        tekuci_dan = danas + timedelta(days=i)
-        dani.append(tekuci_dan.strftime('%d.%m.%Y'))
+        dani_dt.append(danas + timedelta(days=i))
         
-    # 2. Izvlačimo osnovnu strukturu mašina iz Garaže (GARAZA_BAZA.csv)
+    # 🎯 SREĐIVANJE DATUMA: Sortiramo datume vojnički od najstarijeg ka najnovijem
+    dani_dt.sort()
+    dani = [d.strftime('%d.%m.%Y') for d in dani_dt]
+        
+    # 2. Brzo čitanje osnovne strukture mašina iz Garaže
     if os.path.exists('GARAZA_BAZA.csv'):
         df_g = pd.read_csv('GARAZA_BAZA.csv')
         df_g.columns = [c.upper().strip() for c in df_g.columns]
-        kolona_gb = 'GARAŽNI BROJ' if 'GARAŽNI BROJ' in df_g.columns else ('GARAŽNI_BROJ' if 'GARAŽNI_BROJ' in df_g.columns else df_g.columns[1])
-        kolona_tip = 'TIP MAŠINE' if 'TIP MAŠINE' in df_g.columns else ('TIP_MAŠINE' if 'TIP_MAŠINE' in df_g.columns else df_g.columns[0])
+        kolona_gb = 'GARAŽNI BROJ' if 'GARAŽNI BROJ' in df_g.columns else df_g.columns
+        kolona_tip = 'TIP MAŠINE' if 'TIP MAŠINE' in df_g.columns else df_g.columns
         df_final = pd.DataFrame()
         df_final['MAŠINA'] = df_g[kolona_tip].astype(str).str.strip().str.upper()
         df_final['ID MAŠINE'] = df_g[kolona_gb].astype(str).str.strip().str.upper()
     else:
         return pd.DataFrame(), dani
 
-    # Dodajemo kolone za ovih 10 operativnih dana
+    # Pravimo kolone za operativne dane u tačnom hronološkom redosledu
     for dan in dani:
         df_final[dan] = ""
 
-    # SLOJ 1: Popunjavamo stalne nosioce iz turnusa
+    # 🎯 SLOJ 1: Pametno preračunavanje aktivnog nosioca za SVAKI DAN POJEDINAČNO (A/B smena)
     for dan in dani:
+        # Pozivamo tvoj turnus motor iz nosioci.py koji zna ko tačno radi tog dana
         nosioci_za_dan = izracunaj_aktivnog_nosioca(fajl_baze, dan)
         for idx, red in df_final.iterrows():
             m_id = str(red['ID MAŠINE']).strip().upper()
             if m_id in nosioci_za_dan:
                 df_final.at[idx, dan] = str(nosioci_za_dan[m_id]).upper().strip()
 
-    # SLOJ 2: Proveravamo ispravnost_baza.csv i brišemo ljude ako je mašina NE, MIR, VIK
+    # SLOJ 2: Filter ispravnosti (Brišemo vozača ako je mašina u kvaru, leži ili je vikend)
     if os.path.exists('ispravnost_baza.csv'):
         try:
             df_isp = pd.read_csv('ispravnost_baza.csv')
@@ -52,7 +56,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
         except:
             pass
 
-    # SLOJ 3: Primenjujemo izričitu vojnu naredbu iz Zamena (zamena.csv)
+    # SLOJ 3: Vojna naredba iz Zamena (Prebrisavanje gotovih ćelija realnim stanjem)
     if os.path.exists('zamena.csv'):
         try:
             df_zam = pd.read_csv('zamena.csv')
