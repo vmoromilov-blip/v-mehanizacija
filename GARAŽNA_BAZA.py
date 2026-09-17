@@ -21,6 +21,10 @@ def prikazi_garazu(fajl_baze):
     except:
         return
 
+    # 🎯 AUTOMATSKO SORTIRANJE OD A DO Z PO TIPU MAŠINE
+    if 'TIP MAŠINE' in df.columns:
+        df = df.sort_values(by='TIP MAŠINE').reset_index(drop=True)
+
     with st.popover("➕ DODAJ VOZILO"):
         st.write("### Unesi novo vozilo u sistem")
         novi_tip = st.text_input("Tip vozila (npr. KIPER, BAGER):")
@@ -35,21 +39,13 @@ def prikazi_garazu(fajl_baze):
                     
     st.write("")
 
-    # 🎯 TRAJNO CEMENTIRAMO PIN I ŠIRINU KOLONA ZA GARAŽU
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
         num_rows="dynamic",
         column_config={
-            "TIP MAŠINE": st.column_config.TextColumn(
-                "TIP MAŠINE", 
-                pinned=True,     # OVO JE TRAJNI PIN!
-                width="medium"   # KOMFORNA ŠIRINA DA SE SVE VIDI
-            ),
-            "GARAŽNI BROJ": st.column_config.TextColumn(
-                "GARAŽNI BROJ", 
-                width="medium"
-            )
+            "TIP MAŠINE": st.column_config.TextColumn("TIP MAŠINE", pinned=True, width="medium"),
+            "GARAŽNI BROJ": st.column_config.TextColumn("GARAŽNI BROJ", width="medium")
         },
         key="zivi_editor_garaze"
     )
