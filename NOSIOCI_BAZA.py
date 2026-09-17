@@ -14,15 +14,19 @@ def prikazi_nosioce(fajl_baze):
                     df['START DATUM'] = pd.to_datetime(df['START DATUM']).dt.strftime('%d.%m.%Y')
                 df.to_csv(fajl_csv, index=False)
             except:
-                df = pd.DataFrame(columns=['ID MAŠINE', 'TIP TURNUSA', 'START DATUM', 'SMENA', 'SAP BROJ', 'NOSILAC'])
+                df = pd.DataFrame(columns=['ID MAŠINE', 'TIP TURNUSA', 'START DATUM', 'SMENA', 'ID BROJ', 'NOSILAC'])
         else:
-            df = pd.DataFrame(columns=['ID MAŠINE', 'TIP TURNUSA', 'START DATUM', 'SMENA', 'SAP BROJ', 'NOSILAC'])
+            df = pd.DataFrame(columns=['ID MAŠINE', 'TIP TURNUSA', 'START DATUM', 'SMENA', 'ID BROJ', 'NOSILAC'])
             df.to_csv(fajl_csv, index=False)
 
     try:
         df = pd.read_csv(fajl_csv)
     except:
         return
+
+    # 🎯 AUTOMATSKO SORTIRANJE OD A DO Z PO GARAŽNOM BROJU
+    if 'ID MAŠINE' in df.columns:
+        df = df.sort_values(by='ID MAŠINE').reset_index(drop=True)
 
     df = df.rename(columns={'DATUM POČETKA': 'START DATUM', 'SAP BROJ': 'ID BROJ'})
     if 'TIP' in df.columns:
@@ -48,7 +52,6 @@ def prikazi_nosioce(fajl_baze):
         except:
             pass
 
-    # --- POPRAVLJENO I SIGURNO DUGME NA VRHU ---
     with st.popover("🔑 DODAJ NOSIOCA"):
         st.write("### Unesi novo stalno zaduženje mehanizacije")
         n_id = st.selectbox("Izaberi garažni broj mašine:", opcije_masina, key="nos_id")
@@ -64,9 +67,9 @@ def prikazi_nosioce(fajl_baze):
                     df_r = pd.read_csv('POSADA_BAZA.csv')
                     s = df_r[df_r['PREZIME I IME'] == n_radnik]['SAP BROJ'].values
                     try:
-                        id_br = str(int(float(s[0]))) if len(s) > 0 and pd.notna(s[0]) else ""
+                        id_br = str(int(float(s))) if len(s) > 0 and pd.notna(s) else ""
                     except:
-                        id_br = str(s[0]) if len(s) > 0 else ""
+                        id_br = str(s) if len(s) > 0 else ""
 
                 novi_red = pd.DataFrame([{
                     'ID MAŠINE': str(n_id).strip().upper(),
