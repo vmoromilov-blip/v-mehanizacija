@@ -60,11 +60,15 @@ def prikazi_raspored(fajl_baze):
         except:
             pass
 
-    # --- 🎯 NOVO, KRUPNO I SIGURNO DUGME SA PADAJUĆIM MENIJIMA NA VRHU EKRANA ---
+    # --- 🎯 POPRAVLJENO DUGME SA PRAVIM GRAFIČKIM KALENDAROM ZA URANJANJE ---
     with st.popover("📅 KORIGUJ RASPORED"):
-        st.write("### Unesi brzu operativnu izmenu vozača za konkretan dan")
+        st.write("### Unesi brzu operativnu izmenu vozača")
         k_id = st.selectbox("Izaberi garažni broj mašine:", opcije_masina, key="kor_id")
-        k_dan = st.selectbox("Izaberi datum za korekciju:", dani, key="kor_dan")
+        
+        # OVO JE SADA PRAVI GRAFIČKI KALENDAR NA KLIK UNUTAR PROZORČIĆA
+        k_datum_izbor = st.date_input("Izaberi datum za korekciju:", datetime.now().date(), key="kor_dat")
+        k_dan = k_datum_izbor.strftime('%d.%m.%Y')
+        
         k_radnik = st.selectbox("Izaberi novog vozača (Padajući meni):", opcije_radnika, key="kor_rad")
         
         if st.button("SAČUVAJ IZMENU", key="kor_btn"):
@@ -74,7 +78,7 @@ def prikazi_raspored(fajl_baze):
                 except:
                     df_promene = pd.DataFrame(columns=['ID MAŠINE', 'DATUM', 'NOVI VOZAČ'])
                 
-                # Čistimo stare zapise za istu mašinu i isti dan da nema uduplavanja
+                # Čistimo stare zapise za istu mašinu i isti dan da nema dupliranja
                 df_promene = df_promene[~((df_promene['ID MAŠINE'] == str(k_id).strip().upper()) & (df_promene['DATUM'] == str(k_dan).strip()))]
                 
                 # Upisujemo novu korekciju
@@ -111,7 +115,7 @@ def prikazi_raspored(fajl_baze):
     else:
         poredjane_kolone = osnovne_kolone + dani
 
-    # Otvaramo tabelu koja je fabrički zaključana za direktno kucanje radi maksimalne brzine
+    # Otvaramo mirnu i fiksiranu tabelu bez ikakvih kočenja i petlji
     st.data_editor(
         df,
         use_container_width=True,
@@ -120,6 +124,6 @@ def prikazi_raspored(fajl_baze):
             "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True, disabled=True),
             "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True, disabled=True)
         },
-        disabled=True, # Zaključano za kucanje prstom, sve izmene idu bezbedno preko gornjeg dugmeta!
+        disabled=True,
         key="editor_troslojnog_rasporeda_fiksni_mirni"
     )
