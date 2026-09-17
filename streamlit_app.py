@@ -3,14 +3,15 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# UVOZIMO NAŠE KRUPNE PODFASCIKLE
+# UVOZIMO NAŠE NOVE KRUPNE PODFASCIKLE VELIKIM SLOVIMA
 from GARAŽNA_BAZA import prikazi_garazu
 from POSADA_BAZA import prikazi_posadu
 from ZAMENA_BAZA import prikazi_zamenu
 from NOSIOCI_BAZA import prikazi_nosioce
 from ISPRAVNOST_EKRAN import prikazi_ispravnost
-from raspored import prikazi_raspored
+from RASPORED_EKRAN import prikazi_raspored
 
+# Podešavamo sajt da fabrički uvek koristi maksimalnu širinu ekrana
 st.set_page_config(page_title="Operativni Izveštaji", layout="wide")
 
 st.sidebar.header("MENI SA MODULIMA")
@@ -32,7 +33,6 @@ elif modul == "ZAMENA":
     prikazi_zamenu(fajl_baze)
 
 elif modul == "NOSIOCI":
-    # Pozivamo našu novu, čistu i stabilnu fioku Nosioci
     prikazi_nosioce(fajl_baze)
 
 elif modul == "ISPRAVNOST":
