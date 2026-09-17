@@ -1,129 +1,78 @@
-import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
+from nosioci import izracunaj_aktivnog_nosioca
 
-# UVOZIMO TROSLOJNU MATEMATIKU U POZADINI (NOSIOCI + ISPRAVNOST + ZAMENA)
-from RASPORED_MATEMATIKA import izracunaj_troslojni_raspored
-
-def prikazi_raspored(fajl_baze):
-    # CEMENTIRAMO MAKSIMALAN VIDIK OD IVICE DO IVICE EKRANA I SAKRIVAMO NASLOVE
-    st.markdown("""
-        <style>
-            .main .block-container {
-                max-width: 100% !important;
-                padding-left: 0.5rem !important;
-                padding-right: 0.5rem !important;
-                padding-top: 1.5rem !important;
-                padding-bottom: 0rem !important;
-            }
-            .stHeading, h1, h2, h3 {
-                display: none !important;
-            }
-            .stDataEditor {
-                width: 100% !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
-    
-    fajl_rucnih_promena = "raspored_rucne_promene.csv"
-    danasnji_str = datetime.now().strftime('%d.%m.%Y')
-    
-    # 1. Računamo osnovni troslojni raspored iz pozadinske matematike
-    df, dani = izracunaj_troslojni_raspored(fajl_baze)
-    
-    if df.empty:
-        st.error("Podaci za raspored nisu uspešno učitani iz baze.")
-        return
-
-    # Inicijalizujemo fajl za ručne korekcije ako ne postoji
-    if not os.path.exists(fajl_rucnih_promena) or os.path.getsize(fajl_rucnih_promena) == 0:
-        df_prazan = pd.DataFrame(columns=['ID MAŠINE', 'DATUM', 'NOVI VOZAČ'])
-        df_prazan.to_csv(fajl_rucnih_promena, index=False)
-
-    # Učitavamo spiskove vozača i mašina za čiste padajuće menije na vrhu
-    opcije_radnika = [""]
-    if os.path.exists('POSADA_BAZA.csv'):
-        try:
-            df_r = pd.read_csv('POSADA_BAZA.csv')
-            if 'PREZIME I IME' in df_r.columns:
-                opcije_radnika.extend(sorted(df_r['PREZIME I IME'].dropna().astype(str).unique()))
-        except:
-            pass
-
-    opcije_masina = [""]
+def izracunaj_troslojni_raspored(fajl_baze):
+    # 1. Pravimo prozor od TAČNO 10 operativnih dana (5 unazad, danas, 4 unapred)
+    danas = datetime.now()
+    dani_dt = []
+    for i in range(-5, 5):
+        dani_dt.append(danas + timedelta(days=i))
+        
+    # Sortiramo ih strogo hronološki da datumi idu prirodno sleva nadesno
+    dani_dt.sort()
+    dani = [d.strftime('%d.%m.%Y') if isinstance(d, datetime) else str(d) for d in dani_dt]
+        
+    # 2. Brzo čitanje osnovne strukture mašina iz Garaže
     if os.path.exists('GARAZA_BAZA.csv'):
-        try:
-            df_m = pd.read_csv('GARAZA_BAZA.csv')
-            if 'GARAŽNI BROJ' in df_m.columns:
-                opcije_masina.extend(sorted(df_m['GARAŽNI BROJ'].dropna().astype(str).unique()))
-        except:
-            pass
-
-    # --- 🎯 POPRAVLJENO DUGME SA PRAVIM GRAFIČKIM KALENDAROM ZA URANJANJE ---
-    with st.popover("📅 KORIGUJ RASPORED"):
-        st.write("### Unesi brzu operativnu izmenu vozača")
-        k_id = st.selectbox("Izaberi garažni broj mašine:", opcije_masina, key="kor_id")
-        
-        # OVO JE SADA PRAVI GRAFIČKI KALENDAR NA KLIK UNUTAR PROZORČIĆA
-        k_datum_izbor = st.date_input("Izaberi datum za korekciju:", datetime.now().date(), key="kor_dat")
-        k_dan = k_datum_izbor.strftime('%d.%m.%Y')
-        
-        k_radnik = st.selectbox("Izaberi novog vozača (Padajući meni):", opcije_radnika, key="kor_rad")
-        
-        if st.button("SAČUVAJ IZMENU", key="kor_btn"):
-            if k_id and k_dan:
-                try:
-                    df_promene = pd.read_csv(fajl_rucnih_promena)
-                except:
-                    df_promene = pd.DataFrame(columns=['ID MAŠINE', 'DATUM', 'NOVI VOZAČ'])
-                
-                # Čistimo stare zapise za istu mašinu i isti dan da nema dupliranja
-                df_promene = df_promene[~((df_promene['ID MAŠINE'] == str(k_id).strip().upper()) & (df_promene['DATUM'] == str(k_dan).strip()))]
-                
-                # Upisujemo novu korekciju
-                novi_red = pd.DataFrame([{'ID MAŠINE': str(k_id).strip().upper(), 'DATUM': str(k_dan).strip(), 'NOVI VOZAČ': str(k_radnik).upper().strip()}])
-                df_promene = pd.concat([df_promene, novi_red], ignore_index=True)
-                df_promene.to_csv(fajl_rucnih_promena, index=False)
-                st.success("Izmena uspešno upisana!")
-                st.rerun()
-
-    st.write("")
-
-    # 2. Primenjujemo sačuvane ručne korekcije preko izračunatog rasporeda
-    if os.path.exists(fajl_rucnih_promena):
-        try:
-            df_promene = pd.read_csv(fajl_rucnih_promena)
-            for _, red_p in df_promene.iterrows():
-                m_id = str(red_p['ID MAŠINE']).strip().upper()
-                datum_p = str(red_p['DATUM']).strip()
-                vozac_p = str(red_p['NOVI VOZAČ']).strip().upper()
-                
-                if datum_p in df.columns:
-                    idx_m = df[df['ID MAŠINE'].astype(str).str.strip().str.upper() == m_id].index
-                    if not idx_m.empty:
-                        df.loc[idx_m, datum_p] = vozac_p
-        except:
-            pass
-
-    osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
-    
-    # AUTOMATSKO CENTRIRANJE OKO DANAŠNJEG DANA UNUTAR OVIH 10 OPERATIVNIH DANA
-    if danasnji_str in dani:
-        idx_danas = dani.index(danasnji_str)
-        poredjane_kolone = osnovne_kolone + dani[idx_danas-2:] + dani[:idx_danas-2]
+        df_g = pd.read_csv('GARAZA_BAZA.csv')
+        df_g.columns = [c.upper().strip() for c in df_g.columns]
+        kolona_gb = 'GARAŽNI BROJ' if 'GARAŽNI BROJ' in df_g.columns else df_g.columns
+        kolona_tip = 'TIP MAŠINE' if 'TIP MAŠINE' in df_g.columns else df_g.columns
+        df_final = pd.DataFrame()
+        df_final['MAŠINA'] = df_g[kolona_tip].astype(str).str.strip().str.upper()
+        df_final['ID MAŠINE'] = df_g[kolona_gb].astype(str).str.strip().str.upper()
     else:
-        poredjane_kolone = osnovne_kolone + dani
+        return pd.DataFrame(), dani
 
-    # Otvaramo mirnu i fiksiranu tabelu bez ikakvih kočenja i petlji
-    st.data_editor(
-        df,
-        use_container_width=True,
-        column_order=poredjane_kolone,
-        column_config={
-            "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True, disabled=True),
-            "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True, disabled=True)
-        },
-        disabled=True,
-        key="editor_troslojnog_rasporeda_fiksni_mirni"
-    )
+    # Pravimo kolone SAMO za ovih 10 operativnih dana (Svi ostali dani su obrisani!)
+    for dan in dani:
+        df_final[dan] = ""
+
+    # SLOJ 1: Proračun aktivnih nosilaca iz turnusa za ovih 10 dana
+    for dan in dani:
+        nosioci_za_dan = izracunaj_aktivnog_nosioca(fajl_baze, dan)
+        for idx, red in df_final.iterrows():
+            m_id = str(red['ID MAŠINE']).strip().upper()
+            if m_id in nosioci_za_dan:
+                df_final.at[idx, dan] = str(nosioci_za_dan[m_id]).upper().strip()
+
+    # SLOJ 2: Filter ispravnosti (Brišemo ljude ako mašina leži ili je u kvaru)
+    if os.path.exists('ispravnost_baza.csv'):
+        try:
+            df_isp = pd.read_csv('ispravnost_baza.csv')
+            df_isp['ID MAŠINE'] = df_isp['ID MAŠINE'].astype(str).str.strip().str.upper()
+            for dan in dani:
+                if dan in df_isp.columns:
+                    for idx, red in df_final.iterrows():
+                        m_id = str(red['ID MAŠINE']).strip().upper()
+                        status_red = df_isp[df_isp['ID MAŠINE'] == m_id]
+                        if not status_red.empty:
+                            trenutni_status = str(status_red[dan].values).strip().upper()
+                            if trenutni_status in ['NE', 'MIR', 'VIK']:
+                                df_final.at[idx, dan] = ""
+        except:
+            pass
+
+    # SLOJ 3: Vojna naredba iz Zamena (Prebrisavanje ćelija realnim stanjem na terenu)
+    if os.path.exists('zamena.csv'):
+        try:
+            df_zam = pd.read_csv('zamena.csv')
+            for dan in dani:
+                trenutni_dt = datetime.strptime(dan, '%d.%m.%Y')
+                for _, zam_red in df_zam.iterrows():
+                    p_str = str(zam_red['DATUM POČETKA']).strip()
+                    z_str = str(zam_red['DATUM ZAVRŠETKA']).strip()
+                    p_dt = datetime.strptime(p_str, '%Y-%m-%d') if '-' in p_str else datetime.strptime(p_str, '%d.%m.%Y')
+                    z_dt = datetime.strptime(z_str, '%Y-%m-%d') if '-' in z_str else datetime.strptime(z_str, '%d.%m.%Y')
+                    
+                    if p_dt <= trenutni_dt <= z_dt:
+                        m_id = str(zam_red['ID MAŠINE']).strip().upper()
+                        idx_m = df_final[df_final['ID MAŠINE'] == m_id].index
+                        if not idx_m.empty:
+                            df_final.loc[idx_m, dan] = str(zam_red['ZAMENA']).upper().strip()
+        except:
+            pass
+
+    return df_final.fillna(''), dani
