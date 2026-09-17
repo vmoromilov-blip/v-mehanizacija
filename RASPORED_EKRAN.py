@@ -26,14 +26,35 @@ def prikazi_raspored(fajl_baze):
         </style>
     """, unsafe_allow_html=True)
     
-    # Pokrećemo moćni troslojni proračun u pozadini za samo 10 operativnih dana
-    df, dani = izracunaj_troslojni_raspored(fajl_baze)
+    fajl_zivi_raspored = "raspored_zivi_unos.csv"
+    danasnji_str = datetime.now().strftime('%d.%m.%Y')
     
-    if df.empty:
+    # Računamo osnovni troslojni raspored iz pozadinske matematike
+    df_matematika, dani = izracunaj_troslojni_raspored(fajl_baze)
+    
+    if df_matematika.empty:
         st.error("Podaci za raspored nisu uspešno učitani iz baze.")
         return
 
-    danasnji_str = datetime.now().strftime('%d.%m.%Y')
+    # Ako nemamo sačuvanu živu datoteku ručnih izmena, pravimo je na osnovu matematike
+    if not os.path.exists(fajl_zivi_raspored) or os.path.getsize(fajl_zivi_raspored) == 0:
+        df = df_matematika.copy()
+        df.to_csv(fajl_zivi_raspored, index=False)
+    else:
+        try:
+            df = pd.read_csv(fajl_zivi_raspored)
+            df = df.fillna('')
+            # Osiguravamo da su sve kolone i nove mašine iz matematike uvek tu
+            df['ID MAŠINE'] = df['ID MAŠINE'].astype(str).str.strip().str.upper()
+            df_matematika['ID MAŠINE'] = df_matematika['ID MAŠINE'].astype(str).str.strip().str.upper()
+            
+            for _, red in df_matematika.iterrows():
+                m_id = red['ID MAŠINE']
+                if m_id not in df['ID MAŠINE'].values:
+                    df = pd.concat([df, pd.DataFrame([red])], ignore_index=True)
+        except:
+            df = df_matematika.copy()
+
     osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
     
     # AUTOMATSKO CENTRIRANJE OKO DANAŠNJEG DANA UNUTAR OVIH 10 OPERATIVNIH DANA
@@ -43,7 +64,7 @@ def prikazi_raspored(fajl_baze):
     else:
         poredjane_kolone = osnovne_kolone + dani
 
-    # Učitavamo spisak radnika iz vozača za brze padajuće menije unutar samih ćelija kalendara
+    # Učitavamo spisak vozača za padajuće menije unutar ćelija kalendara
     opcije_radnika = [""]
     if os.path.exists('POSADA_BAZA.csv'):
         try:
@@ -53,32 +74,36 @@ def prikazi_raspored(fajl_baze):
         except:
             pass
 
-    # --- KONFIGURACIJA TABELE MEHANIZACIJE ---
+    # --- KONFIGURACIJA TABELE: MAŠINE SU ZAKLJUČANE, A KALENDAR JE POTPUNO OTKLJUČAN ---
     konfiguracija_kolona = {
         "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True, disabled=True),
         "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True, disabled=True)
     }
     
     for col in dani:
-        if len(opcije_radnika) > 1:
-            konfiguracija_kolona[col] = st.column_config.SelectboxColumn(
-                f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col,
-                options=opcije_radnika
-            )
-        else:
-            konfiguracija_kolona[col] = st.column_config.TextColumn(f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col)
+        if col in df.columns:
+            if len(opcije_radnika) > 1:
+                # 🎯 ĆELIJE SU SADA OTKLJUČANE I IMAJU PADAJUĆE MENIJE ZA IZBOR VOZAČA
+                konfiguracija_kolona[col] = st.column_config.SelectboxColumn(
+                    f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col,
+                    options=opcije_radnika,
+                    required=False
+                )
+            else:
+                konfiguracija_kolona[col] = st.column_config.TextColumn(f"🚨 {col} (DANAS) 🚨" if col == danasnji_str else col)
 
-    # Otvaramo miran, stabilan i maksimalno rastegnut data_editor bez ikakvih naslova
+    # Otvaramo potpuno otključan živi data_editor od ivice do ivice ekrana
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
         column_order=poredjane_kolone,
         column_config=konfiguracija_kolona,
-        key="editor_troslojnog_rasporeda_finalni"
+        key="zivi_editor_troslojnog_rasporeda_otkljucani"
     )
     
-    # Živi i trajni upis ako ručno promeniš ime vozača prstom na telefonu
-    if izmenjeni_df is not None and not izmenjeni_df.equals(df):
-        fajl_csv = "raspored_baza.csv"
-        izmenjeni_df.to_csv(fajl_csv, index=False)
-        st.rerun()
+    # 🎯 ŽIVI I TRAJNI UPIS: Čim prstom promeniš vozača na telefonu, sajt to odmah trajno zaključava unutra!
+    if izmenjeni_df is not None:
+        osnovni_df = pd.DataFrame(izmenjeni_df.values, columns=df.columns)
+        if not osnow_df := osnovni_df.equals(df):
+            osnovni_df.to_csv(fajl_zivi_raspored, index=False)
+            st.rerun()
