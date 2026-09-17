@@ -5,27 +5,45 @@ import os
 def prikazi_posadu(fajl_baze):
     fajl_csv = "POSADA_BAZA.csv"
     
-    if not os.path.exists(fajl_csv) or os.path.getsize(fajl_csv) == 0:
-        if os.path.exists(fajl_baze):
-            try:
-                df = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
-                df.to_csv(fajl_csv, index=False)
-            except:
-                df = pd.DataFrame(columns=['SAP BROJ', 'PREZIME I IME', 'STATUS'])
-                df.to_csv(fajl_csv, index=False)
-        else:
+    # 🚀 REVOLUCIONARNA POPRAVKA: Ako fajl postoji, brišemo ga da očistimo memoriju od starih sukoba kolona
+    if os.path.exists(fajl_csv):
+        try:
+            os.remove(fajl_csv)
+        except:
+            pass
+            
+    # Pravimo potpuno novu, čistu i prečišćenu bazu vozača iz Excela
+    if os.path.exists(fajl_baze):
+        try:
+            df = pd.read_excel(fajl_baze, sheet_name='SPISAK RADNIKA')
+            # Čistimo prazna mesta u nazivima kolona
+            df.columns = [str(c).strip() for c in df.columns]
+            
+            # Prisno zadržavamo samo tri glavne kolone i čistimo viškove (mail, tip...)
+            kolone_za_zadrzavanje = [c for c in ['SAP BROJ', 'PREZIME I IME', 'STATUS'] if c in df.columns]
+            df = df[kolone_za_zadrzavanje].copy()
+            
+            # Ako kolona STATUS postoji, punimo je rečju AKTIVAN, ako ne postoji - pravimo je!
+            df['STATUS'] = 'AKTIVAN'
+            
+            df.to_csv(fajl_csv, index=False)
+        except:
             df = pd.DataFrame(columns=['SAP BROJ', 'PREZIME I IME', 'STATUS'])
             df.to_csv(fajl_csv, index=False)
+    else:
+        df = pd.DataFrame(columns=['SAP BROJ', 'PREZIME I IME', 'STATUS'])
+        df.to_csv(fajl_csv, index=False)
 
     try:
         df = pd.read_csv(fajl_csv)
     except:
         return
 
-    # 🎯 AUTOMATSKO SORTIRANJE OD A DO Z PO PREZIMENU I IMENU VOZAČA
+    # 🎯 AUTOMATSKO SORTIRANJE OD A DO Z PO PREZIMENU I IMENU RADNIKA
     if 'PREZIME I IME' in df.columns:
         df = df.sort_values(by='PREZIME I IME').reset_index(drop=True)
 
+    # Čisto fabričko dugme na samom vrhu ekrana
     with st.popover("➕ DODAJ RADNIKA"):
         st.write("### Unesi novog radnika u sistem")
         novo_ime = st.text_input("Prezime i ime radnika:")
@@ -40,6 +58,7 @@ def prikazi_posadu(fajl_baze):
                     
     st.write("")
 
+    # Prikazujemo fiksiranu, stabilnu i široku tabelu od ivice do ivice bez ikakvih grešaka
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
@@ -49,7 +68,7 @@ def prikazi_posadu(fajl_baze):
             "PREZIME I IME": st.column_config.TextColumn("PREZIME I IME", width="large"),
             "STATUS": st.column_config.TextColumn("STATUS", width="medium")
         },
-        key="zivi_editor_radnika_cist_i_siguran"
+        key="zivi_editor_radnika_konacni_mirni_sortirani"
     )
     
     if izmenjeni_df is not None and not izmenjeni_df.equals(df):
