@@ -6,7 +6,6 @@ from datetime import datetime
 def prikazi_nosioce(fajl_baze):
     fajl_csv = "nosioci_baza.csv"
     
-    # Ako živa baza u fascikli još ne postoji, pravimo je iz Excela
     if not os.path.exists(fajl_csv) or os.path.getsize(fajl_csv) == 0:
         if os.path.exists(fajl_baze):
             try:
@@ -25,14 +24,12 @@ def prikazi_nosioce(fajl_baze):
     except:
         return
 
-    # Čistimo nazive kolona i brišemo nepotrebne prazne kolone ("TIP") ako postoje
     df = df.rename(columns={'DATUM POČETKA': 'START DATUM', 'SAP BROJ': 'ID BROJ'})
     if 'TIP' in df.columns:
         df = df.drop(columns=['TIP'], errors='ignore')
 
     df = df.fillna('')
 
-    # Učitavamo spiskove za padajuće menije
     opcije_radnika = [""]
     if os.path.exists('POSADA_BAZA.csv'):
         try:
@@ -51,27 +48,29 @@ def prikazi_nosioce(fajl_baze):
         except:
             pass
 
-    # --- KRUPNO FABRIČKO DUGME NA VRHU ---
+    # --- POPRAVLJENO I SIGURNO DUGME NA VRHU ---
     with st.popover("🔑 DODAJ NOSIOCA"):
         st.write("### Unesi novo stalno zaduženje mehanizacije")
         n_id = st.selectbox("Izaberi garažni broj mašine:", opcije_masina, key="nos_id")
-        n_turnus = st.selectbox("Tip turnusa (Način rada):", [1, 5, 7, 15, 30], key="nos_tur")
+        n_turnus = st.selectbox("Tip turnusa (Način rada):", ["1", "5", "7", "15", "30"], key="nos_tur")
         n_smena = st.radio("Smena:", ["A", "B"], horizontal=True, key="nos_sme")
         n_radnik = st.selectbox("Izaberi stalnog nosioca (vozača):", opcije_radnika, key="nos_rad")
         n_datum = st.date_input("Datum starta turnusa:", datetime.now().date(), key="nos_dat")
         
         if st.button("SAČUVAJ ZADUŽENJE", key="nos_btn"):
             if n_id and n_radnik:
-                # Automatski vučemo ID broj radnika iz vozača
                 id_br = ""
                 if os.path.exists('POSADA_BAZA.csv'):
                     df_r = pd.read_csv('POSADA_BAZA.csv')
                     s = df_r[df_r['PREZIME I IME'] == n_radnik]['SAP BROJ'].values
-                    id_br = str(int(float(s))) if len(s) > 0 and pd.notna(s) else ""
+                    try:
+                        id_br = str(int(float(s[0]))) if len(s) > 0 and pd.notna(s[0]) else ""
+                    except:
+                        id_br = str(s[0]) if len(s) > 0 else ""
 
                 novi_red = pd.DataFrame([{
                     'ID MAŠINE': str(n_id).strip().upper(),
-                    'TIP TURNUSA': int(n_turnus),
+                    'TIP TURNUSA': str(n_turnus),
                     'START DATUM': n_datum.strftime('%d.%m.%Y'),
                     'SMENA': str(n_smena).strip().upper(),
                     'ID BROJ': id_br,
@@ -84,13 +83,11 @@ def prikazi_nosioce(fajl_baze):
 
     st.write("")
 
-    # Čišćenje decimala sa ID brojeva i turnusa na ekranu
     for col in ['ID BROJ', 'TIP TURNUSA']:
         if col in df.columns:
             df[col] = df[col].astype(str).str.replace(r'\.0$', '', regex=True).str.replace('nan', '').str.strip()
 
-    # Prikazujemo fiksiranu, široku tabelu od ivice do ivice
-    izmenjeni_df = st.data_editor(
+    st.data_editor(
         df,
         use_container_width=True,
         num_rows="dynamic",
@@ -104,7 +101,3 @@ def prikazi_nosioce(fajl_baze):
         },
         key="zivi_editor_nosilaca_finalni"
     )
-    
-    if izmenjeni_df is not None and not izmenjeni_df.equals(df):
-        izmenjeni_df.to_csv(fajl_csv, index=False)
-        st.rerun()
