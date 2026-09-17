@@ -1,13 +1,11 @@
 import streamlit as st
 import pandas as pd
 import os
-# UVOZIMO NAŠU NOVU MATEMATIKU ZA BRISANJE ZAREZA
 from ZAMENA_MATEMATIKA import ocisti_decimale_i_kolone, nadji_id_broj_radnika
 
 def prikazi_zamenu(fajl_baze):
     fajl_csv = "zamena.csv"
     
-    # Ako fajl u memoriji ne postoji, pravimo ga inicijalno iz Excela
     if not os.path.exists(fajl_csv) or os.path.getsize(fajl_csv) == 0:
         if os.path.exists(fajl_baze):
             df = pd.read_excel(fajl_baze, sheet_name='ZAMENA')
@@ -21,10 +19,12 @@ def prikazi_zamenu(fajl_baze):
     except:
         return
 
-    # POZIVAMO MATEMATIKU DA NAM OBRUŠI ZAREZE I SREDI NAZIVE KOLONA (NEMA MOTANJA)
     df = ocisti_decimale_i_kolone(df)
 
-    # Učitavamo spiskove za brze padajuće menije na dvoklik
+    # 🎯 AUTOMATSKO SORTIRANJE OD A DO Z PO GARAŽNOM BROJU MAŠINE
+    if 'ID MAŠINE' in df.columns:
+        df = df.sort_values(by='ID MAŠINE').reset_index(drop=True)
+
     opcije_radnika = [""]
     if os.path.exists('POSADA_BAZA.csv'):
         opcije_radnika.extend(sorted(pd.read_csv('POSADA_BAZA.csv')['PREZIME I IME'].dropna().unique()))
@@ -33,7 +33,6 @@ def prikazi_zamenu(fajl_baze):
     if os.path.exists('GARAZA_BAZA.csv'):
         opcije_masina.extend(sorted(pd.read_csv('GARAZA_BAZA.csv')['GARAŽNI BROJ'].dropna().unique()))
 
-    # Krupno i čisto dugme na vrhu ekrana
     with st.popover("🔄 DODAJ ZAMENU"):
         z_id = st.selectbox("Izaberi garažni broj mašine:", opcije_masina)
         z_smena = st.radio("Smena:", ["A", "B"], horizontal=True)
@@ -57,7 +56,6 @@ def prikazi_zamenu(fajl_baze):
 
     st.write("")
 
-    # Fiksirana, široka tabela zamena od ivice do ivice ekrana sa ugrađenim menijima
     izmenjeni_df = st.data_editor(
         df,
         use_container_width=True,
