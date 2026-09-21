@@ -16,8 +16,9 @@ def inicijalizuj_bazu_ispravnosti(fajl_baze, fajl_csv):
 def dodaj_nova_vozila_u_ispravnost(df, fajl_csv):
     df['ID MAŠINE'] = df['ID MAŠINE'].astype(str).str.strip().str.upper()
     sve_aktivne_masine = set()
+    cisti_aktivni_gb = []
 
-    # 1. Čitamo samo mašine koje STVARNO postoje u Garaži (GARAZA_BAZA.csv)
+    # 1. Čitamo mašine koje stvarno postoje u Garaži (GARAZA_BAZA.csv)
     if os.path.exists('GARAZA_BAZA.csv'):
         try:
             df_g = pd.read_csv('GARAZA_BAZA.csv')
@@ -29,38 +30,22 @@ def dodaj_nova_vozila_u_ispravnost(df, fajl_csv):
                 tip = str(r[kolona_tip]).strip().upper()
                 if gb != "" and gb != "NAN":
                     sve_aktivne_masine.add((gb, tip))
+                    cisti_aktivni_gb.append(gb)
         except:
             pass
 
-    # 2. Čitamo mašine iz Zamena (zamena.csv)
-    if os.path.exists('zamena.csv'):
-        try:
-            df_z = pd.read_csv('zamena.csv')
-            df_z.columns = [c.upper().strip() for c in df_z.columns]
-            if 'ID MAŠINE' in df_z.columns:
-                for _, r in df_z.iterrows():
-                    gb = str(r['ID MAŠINE']).strip().upper()
-                    if gb != "" and gb != "NAN" and gb in df['ID MAŠINE'].values:
-                        # Samo ako mašina već postoji ili je u Garaži, ne dodajemo brisane testove
-                        pass
-        except:
-            pass
-
-    # 🚀 AUTOMATSKA METLA: Izbacujemo (brišemo) iz ispravnosti sve mašine kojih nema u Garaži!
-    lista_aktivnih_gb = [m[0] for m in sve_aktivne_masine]
-    
-    # Ako u kalendaru imamo mašinu koja nije u Garaži, brišemo je (osim ako je fabrička iz Excela)
-    if len(lista_aktivnih_gb) > 0:
-        # Radimo filtriranje: zadržavamo samo mašine koje su aktivne u Garaži
-        # (Ovo će automatski zbrisati kiper VM 123-VM jer si ga ti uklonio iz Garaže)
-        df_procešćen = df[df['ID MAŠINE'].isin(lista_aktivnih_gb)].copy()
+    # 🚀 POPRAVLJENA OPERATIVNA METLA: Čistimo sve ručne unose kojih više nema u Garaži!
+    if len(cisti_aktivni_gb) > 0:
+        # Zadržavamo samo fabričke mašine iz originalnog Excela (koje imaju dugačke nazive)
+        # ILI mašine koje se trenutno nalaze na tvom spisku u GARAŽI!
+        # Ovo će bezuslovno obrisati kiper VM 123-VM jer više nije u Garaži!
+        df_procešćen = df[(df['ID MAŠINE'].isin(cisti_aktivni_gb)) | (df['ID MAŠINE'].str.len() > 12)].copy()
         
-        # Ako je metla našla i obrisala stari test, snimamo čisto stanje
         if len(df_procešćen) != len(df):
             df = df_procešćen
             df.to_csv(fajl_csv, index=False)
 
-    # 3. Dodajemo nove ako si uneo nešto stvarno novo u Garažu što fali u kalendaru
+    # 2. Dodajemo nova vozila ako si ih regularno upisao u Garažu
     ažurirano = False
     for gb, tip in sve_aktivne_masine:
         if gb not in df['ID MAŠINE'].values:
