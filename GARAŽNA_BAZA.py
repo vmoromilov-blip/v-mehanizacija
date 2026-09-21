@@ -21,7 +21,14 @@ def prikazi_garazu(fajl_baze):
     except:
         return
 
-    # 🎯 AUTOMATSKO SORTIRANJE OD A DO Z PO TIPU MAŠINE
+    # 🚀 AUTOMATSKA METLA ZA GARAŽU: Ako je u tabeli ostao VM 123-VM, brišemo ga bezuslovno
+    if 'GARAŽNI BROJ' in df.columns:
+        df['GARAŽNI BROJ'] = df['GARAŽNI BROJ'].astype(str).str.strip().str.upper()
+        df_ociscen = df[df['GARAŽNI BROJ'] != 'VM 123-VM'].copy()
+        if len(df_ociscen) != len(df):
+            df = df_ociscen
+            df.to_csv(fajl_csv, index=False)
+
     if 'TIP MAŠINE' in df.columns:
         df = df.sort_values(by='TIP MAŠINE').reset_index(drop=True)
 
