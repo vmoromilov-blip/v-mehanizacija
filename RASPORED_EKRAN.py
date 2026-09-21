@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # UVOZIMO TROSLOJNU MATEMATIKU U POZADINI (NOSIOCI + ISPRAVNOST + ZAMENA)
 from RASPORED_MATEMATIKA import izracunaj_troslojni_raspored
@@ -100,11 +100,19 @@ def prikazi_raspored(fajl_baze):
         except:
             pass
 
-    # 🎯 FIKSIRANI REDOSLED: Slažemo tačno 10 kolona hronološki sleva nadesno
+    # 🎯 FIKSIRANI REDOSLED KOLONA: Slažemo hronološki
     osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
-    poredjane_kolone = osnovne_kolone + dani
+    
+    # Računamo ciljani datum 17.09.2026 za početni fokus levo
+    fokus_datum_str = (datetime.now() - timedelta(days=4)).strftime('%d.%m.%Y')
+    
+    if fokus_datum_str in dani:
+        idx_fokus = dani.index(fokus_datum_str)
+        # Pomeramo kolone tako da 17.09. izbije odmah na početak posle ID mašine
+        poredjane_kolone = osnovne_kolone + dani[idx_fokus:] + dani[:idx_fokus]
+    else:
+        poredjane_kolone = osnovne_kolone + dani
 
-    # --- 🚨 OBELEŽAVANJE DANAŠNJEG DANA U ZAGLAVLJU TABELE 🚨 ---
     konfiguracija_kolona = {
         "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True, disabled=True),
         "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True, disabled=True)
@@ -112,12 +120,10 @@ def prikazi_raspored(fajl_baze):
     
     for col in dani:
         if col == danasnji_str:
-            # Današnja kolona dobija jasan crveni alarm u naslovu!
             konfiguracija_kolona[col] = st.column_config.TextColumn(f"🚨 {col} (DANAS) 🚨")
         else:
             konfiguracija_kolona[col] = st.column_config.TextColumn(col)
 
-    # Otvaramo mirnu, stabilnu i munjevito brzu tabelu od tačno 10 kolona
     st.data_editor(
         df,
         use_container_width=True,
