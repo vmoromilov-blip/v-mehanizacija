@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 from datetime import datetime, timedelta
-# Ponovo uvozimo tvoj originalni motor koji zna da vrti smene A i B kroz dane!
+# Uvozimo tvoj originalni motor za turnuse
 from nosioci import izracunaj_aktivnog_nosioca
 
 def izracunaj_troslojni_raspored(fajl_baze):
@@ -34,10 +34,14 @@ def izracunaj_troslojni_raspored(fajl_baze):
     for dan in dani:
         df_final[dan] = ""
 
-    # --- 🎯 SLOJ 1: PRAVI TURNUS MOTOR (Računa ritam rada za SVAKI DAN pojedinačno!) ---
+    # --- 🎯 SLOJ 1: POPRAVLJEN TURNUS MOTOR (Korigovan kalendarski prozor za +1 dan) ---
     for dan in dani:
-        # Pozivamo funkciju koja preračunava ko stvarno radi na taj tačan dan po Excel rasporedu
-        nosioci_za_dan = izracunaj_aktivnog_nosioca(fajl_baze, dan)
+        # Pretvaramo u datum, dodajemo 1 dan da poništimo fabričko kašnjenje formule, pa vraćamo u tekst
+        dt_dan = datetime.strptime(dan, '%d.%m.%Y')
+        korigovan_dan_str = (dt_dan + timedelta(days=1)).strftime('%d.%m.%Y')
+        
+        # Pozivamo funkciju sa upeglanim datumom i dobijamo bezgrešan ritam smena!
+        nosioci_za_dan = izracunaj_aktivnog_nosioca(fajl_baze, korigovan_dan_str)
         for idx, red in df_final.iterrows():
             m_id = str(red['ID MAŠINE']).strip().upper()
             if m_id in nosioci_za_dan:
@@ -64,7 +68,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
         except:
             pass
 
-    # --- SLOJ 3: Vojna naredba iz Zamena (Precijano sečenje u dan!) ---
+    # --- SLOJ 3: Vojna naredba iz Zamena (Precizno sečenje u dan!) ---
     if os.path.exists('zamena.csv'):
         try:
             df_zam = pd.read_csv('zamena.csv')
