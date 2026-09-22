@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 from datetime import datetime, timedelta
-# Uvozimo tvoj originalni motor za turnuse
+# Vraćamo tvoj provereni i originalni motor za turnuse u punu snagu!
 from nosioci import izracunaj_aktivnog_nosioca
 
 def izracunaj_troslojni_raspored(fajl_baze):
@@ -34,13 +34,10 @@ def izracunaj_troslojni_raspored(fajl_baze):
     for dan in dani:
         df_final[dan] = ""
 
-    # --- 🎯 SLOJ 1: POPRAVLJEN TURNUS MOTOR (Oduzimamo 1 dan za savršeno poravnanje udesno) ---
+    # --- 🎯 SLOJ 1: ČIST FABRIČKI TURNUS MOTOR (Bez ikakvih ugradnih pomeranja dana!) ---
     for dan in dani:
-        dt_dan = datetime.strptime(dan, '%d.%m.%Y')
-        # Menjamo smer: idemo minus jedan dan unazad da vratimo ritam na fabričko mesto!
-        korigovan_dan_str = (dt_dan - timedelta(days=1)).strftime('%d.%m.%Y')
-        
-        nosioci_za_dan = izracunaj_aktivnog_nosioca(fajl_baze, korigovan_dan_str)
+        # Pozivamo fabričku funkciju za tačan datum i dobijamo bezgrešan ritam smena
+        nosioci_za_dan = izracunaj_aktivnog_nosioca(fajl_baze, dan)
         for idx, red in df_final.iterrows():
             m_id = str(red['ID MAŠINE']).strip().upper()
             if m_id in nosioci_za_dan:
@@ -56,18 +53,18 @@ def izracunaj_troslojni_raspored(fajl_baze):
             for dan in dani:
                 kolona_ispravnosti = [c for c in df_isp.columns if c == dan]
                 if kolona_ispravnosti:
-                    c_dan = kolona_ispravnosti[0]
+                    c_dan = kolona_ispravnosti
                     for idx, red in df_final.iterrows():
                         m_id = str(red['ID MAŠINE']).strip().upper()
                         status_red = df_isp[df_isp['ID MAŠINE'] == m_id]
                         if not status_red.empty:
-                            trenutni_status = str(status_red[c_dan].values[0]).strip().upper()
+                            trenutni_status = str(status_red[c_dan].values).strip().upper()
                             if trenutni_status in ['NE', 'MIR', 'VIK']:
                                 df_final.at[idx, dan] = ""
         except:
             pass
 
-    # --- SLOJ 3: Vojna naredba iz Zamena (Strogo sečenje u milimetar bez prelivanja) ---
+    # --- SLOJ 3: Vojna naredba iz Zamena (Strogo sečenje u dan prema bazi) ---
     if os.path.exists('zamena.csv'):
         try:
             df_zam = pd.read_csv('zamena.csv')
@@ -83,7 +80,6 @@ def izracunaj_troslojni_raspored(fajl_baze):
                         p_dt = datetime.strptime(p_str, '%Y-%m-%d') if '-' in p_str else datetime.strptime(p_str, '%d.%m.%Y')
                         z_dt = datetime.strptime(z_str, '%Y-%m-%d') if '-' in z_str else datetime.strptime(z_str, '%d.%m.%Y')
                         
-                        # Zamena važi ISKLJUČIVO unutar zadatog opsega
                         if p_dt.date() <= trenutni_dt.date() <= z_dt.date():
                             m_id = str(zam_red['ID MAŠINE']).strip().upper()
                             idx_m = df_final[df_final['ID MAŠINE'] == m_id].index
