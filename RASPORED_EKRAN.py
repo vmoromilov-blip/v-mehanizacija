@@ -30,21 +30,27 @@ def prikazi_raspored(fajl_baze):
     fajl_starog_unosa = "raspored_zivi_unos.csv"
     danasnji_str = datetime.now().strftime('%d.%m.%Y')
     
-    # 🚀 METLA ZA REČ "NEMA": Prisilno brišemo stari preostali fajl unosa iz memorije da očistimo ekran
+    # 🚀 REVOLUCIONARNO ISPIRANJE: Prisilno brišemo fajlove iz memorije da očistimo sukobe starih kolona i reč "NEMA"
     if os.path.exists(fajl_starog_unosa):
         try:
             os.remove(fajl_starog_unosa)
         except:
             pass
             
+    if os.path.exists(fajl_rucnih_promena):
+        try:
+            os.remove(fajl_rucnih_promena)
+        except:
+            pass
+            
     # Računamo osnovni troslojni raspored iz pozadinske matematike (Samo 10 dana!)
     df, dani = izracunaj_troslojni_raspored(fajl_baze)
     
-    if df.empty:
+    if df is None or not isinstance(df, pd.DataFrame) or df.empty:
         st.error("Podaci za raspored nisu uspešno učitani iz baze.")
         return
 
-    # Inicijalizujemo fajl za ručne korekcije ako ne postoji
+    # Ponovo inicijalizujemo čist fajl za ručne korekcije
     if not os.path.exists(fajl_rucnih_promena) or os.path.getsize(fajl_rucnih_promena) == 0:
         df_prazan = pd.DataFrame(columns=['ID MAŠINE', 'DATUM', 'NOVI VOZAČ'])
         df_prazan.to_csv(fajl_rucnih_promena, index=False)
@@ -92,26 +98,10 @@ def prikazi_raspored(fajl_baze):
 
     st.write("")
 
-    # Primenjujemo sačuvane ručne korekcije preko osnovnog rasporeda
-    if os.path.exists(fajl_rucnih_promena):
-        try:
-            df_promene = pd.read_csv(fajl_rucnih_promena)
-            for _, red_p in df_promene.iterrows():
-                m_id = str(red_p['ID MAŠINE']).strip().upper()
-                datum_p = str(red_p['DATUM']).strip()
-                vozac_p = str(red_p['NOVI VOZAČ']).strip().upper()
-                
-                if datum_p in df.columns:
-                    idx_m = df[df['ID MAŠINE'].astype(str).str.strip().str.upper() == m_id].index
-                    if not idx_m.empty:
-                        df.loc[idx_m, datum_p] = vozac_p
-        except:
-            pass
-
     # 🎯 FIKSIRANI REDOSLED KOLONA: Slažemo hronološki
     osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
     
-    # Računamo ciljani datum 17.09.2026 za početni fokus levo (4 dana unazad od danas 21.09.)
+    # Računamo ciljani datum za početni fokus levo (4 dana unazad)
     fokus_datum_str = (datetime.now() - timedelta(days=4)).strftime('%d.%m.%Y')
     
     if fokus_datum_str in dani:
@@ -131,7 +121,6 @@ def prikazi_raspored(fajl_baze):
         else:
             konfiguracija_kolona[col] = st.column_config.TextColumn(col)
 
-    # Čistimo sve preostale NaN i praznine u celoj tabeli pre nego što je ispišemo
     df = df.fillna('')
 
     st.data_editor(
@@ -140,5 +129,5 @@ def prikazi_raspored(fajl_baze):
         column_order=poredjane_kolone,
         column_config=konfiguracija_kolona,
         disabled=True,
-        key="editor_troslojnog_rasporeda_skraceni_mirni_final"
+        key="editor_troslojnog_rasporeda_skraceni_mirni_final_v2"
     )
