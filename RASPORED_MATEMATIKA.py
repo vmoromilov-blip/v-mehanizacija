@@ -32,7 +32,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
     for dan in dani:
         df_final[dan] = ""
 
-    # SLOJ 1: Munjevito povlačenje redovnih nosilaca direktno iz nove upeglane baze
+    # --- SLOJ 1: Povlačenje redovnih nosilaca iz nove upeglane baze ---
     if os.path.exists('nosioci_baza.csv'):
         try:
             df_n = pd.read_csv('nosioci_baza.csv')
@@ -43,7 +43,6 @@ def izracunaj_troslojni_raspored(fajl_baze):
                 m_id = str(red['ID MAŠINE']).strip().upper()
                 redovni = df_n[df_n['ID MAŠINE'] == m_id]
                 if not redovni.empty:
-                    # Povlačimo poslednjeg dodeljenog stalnog nosioca za tu mašinu
                     ime_radnika = str(redovni.iloc[-1]['NOSILAC']).upper().strip()
                     if ime_radnika != "NAN" and ime_radnika != "":
                         for dan in dani:
@@ -51,24 +50,31 @@ def izracunaj_troslojni_raspored(fajl_baze):
         except:
             pass
 
-    # SLOJ 2: Filter ispravnosti (Brišemo vozača ako mašina leži, u kvaru je ili je vikend)
+    # --- 🎯 SLOJ 2: POPRAVLJENI FILTER ISPRVNOSTI (Čisti ćeliju ako je NE, MIR ili VIK) ---
     if os.path.exists('ispravnost_baza.csv'):
         try:
             df_isp = pd.read_csv('ispravnost_baza.csv')
+            # Čistimo i osiguravamo nazive kolona i ID mašina
+            df_isp.columns = [str(c).strip() for c in df_isp.columns]
             df_isp['ID MAŠINE'] = df_isp['ID MAŠINE'].astype(str).str.strip().str.upper()
+            
             for dan in dani:
-                if dan in df_isp.columns:
+                # Tražimo kolonu u ispravnosti koja odgovara našem datumu
+                kolona_ispravnosti = [c for c in df_isp.columns if c == dan]
+                if kolona_ispravnosti:
+                    c_dan = kolona_ispravnosti[0]
                     for idx, red in df_final.iterrows():
                         m_id = str(red['ID MAŠINE']).strip().upper()
                         status_red = df_isp[df_isp['ID MAŠINE'] == m_id]
                         if not status_red.empty:
-                            trenutni_status = str(status_red[dan].values).strip().upper()
+                            trenutni_status = str(status_red[c_dan].values[0]).strip().upper()
+                            # Ako osetimo bilo šta osim aktivnog rada, momentalno brišemo vozača!
                             if trenutni_status in ['NE', 'MIR', 'VIK']:
                                 df_final.at[idx, dan] = ""
         except:
             pass
 
-    # SLOJ 3: Vojna naredba iz Zamena (Prebrisavanje cells realnim stanjem na terenu)
+    # --- SLOJ 3: Vojna naredba iz Zamena (Prebrisavanje cells realnim stanjem) ---
     if os.path.exists('zamena.csv'):
         try:
             df_zam = pd.read_csv('zamena.csv')
