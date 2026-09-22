@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
-# UVOZIMO ČISTU TROSLOJNU MATEMATIKU U POZADINI
+# UVOZIMO TROSLOJNU MATEMATIKU U POZADINI (NOSIOCI + ISPRAVNOST + ZAMENA)
 from RASPORED_MATEMATIKA import izracunaj_troslojni_raspored
 
 def prikazi_raspored(fajl_baze):
@@ -30,13 +30,6 @@ def prikazi_raspored(fajl_baze):
     fajl_starog_unosa = "raspored_zivi_unos.csv"
     danasnji_str = datetime.now().strftime('%d.%m.%Y')
     
-    # 🚀 REVOLUCIONARNO ISPIRANJE: Čistimo sve stare datoteke iz skrivene memorije
-    if os.path.exists(fajl_starog_unosa):
-        try:
-            os.remove(fajl_starog_unosa)
-        except:
-            pass
-            
     # Računamo osnovni troslojni raspored iz pozadinske matematike (Samo 10 dana!)
     df, dani = izracunaj_troslojni_raspored(fajl_baze)
     
@@ -108,17 +101,9 @@ def prikazi_raspored(fajl_baze):
         except:
             pass
 
-    # 🎯 FIKSIRANI REDOSLED KOLONA: Slažemo hronološki
+    # 🎯 FIKSIRAN STROGI HRONOLOŠKI REDOSLED: Datumi idu tačno onako kako ih je matematika sortirala
     osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
-    
-    # Računamo ciljani datum za početni fokus levo (4 dana unazad)
-    fokus_datum_str = (datetime.now() - timedelta(days=4)).strftime('%d.%m.%Y')
-    
-    if fokus_datum_str in dani:
-        idx_fokus = dani.index(fokus_datum_str)
-        poredjane_kolone = osnovne_kolone + dani[idx_fokus:] + dani[:idx_fokus]
-    else:
-        poredjane_kolone = osnovne_kolone + dani
+    poredjane_kolone = osnovne_kolone + dani
 
     konfiguracija_kolona = {
         "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True, disabled=True),
@@ -133,12 +118,11 @@ def prikazi_raspored(fajl_baze):
 
     df = df.fillna('')
 
-    # 🚀 POPRAVLJEN I PROMENJEN KLJUČ (v3) KOJI PRISILNO RESTARTUJE RADNU MEMORIJU SERVERA
     st.data_editor(
         df,
         use_container_width=True,
         column_order=poredjane_kolone,
         column_config=konfiguracija_kolona,
         disabled=True,
-        key="editor_troslojnog_rasporeda_skraceni_mirni_final_v3"
+        key="editor_troslojnog_rasporeda_skraceni_mirni_final_v5"
     )
