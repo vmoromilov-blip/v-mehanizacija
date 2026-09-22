@@ -27,8 +27,16 @@ def prikazi_raspored(fajl_baze):
     """, unsafe_allow_html=True)
     
     fajl_rucnih_promena = "raspored_rucne_promene.csv"
+    fajl_starog_unosa = "raspored_zivi_unos.csv"
     danasnji_str = datetime.now().strftime('%d.%m.%Y')
     
+    # 🚀 METLA ZA REČ "NEMA": Prisilno brišemo stari preostali fajl unosa iz memorije da očistimo ekran
+    if os.path.exists(fajl_starog_unosa):
+        try:
+            os.remove(fajl_starog_unosa)
+        except:
+            pass
+            
     # Računamo osnovni troslojni raspored iz pozadinske matematike (Samo 10 dana!)
     df, dani = izracunaj_troslojni_raspored(fajl_baze)
     
@@ -103,12 +111,11 @@ def prikazi_raspored(fajl_baze):
     # 🎯 FIKSIRANI REDOSLED KOLONA: Slažemo hronološki
     osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
     
-    # Računamo ciljani datum 17.09.2026 za početni fokus levo
+    # Računamo ciljani datum 17.09.2026 za početni fokus levo (4 dana unazad od danas 21.09.)
     fokus_datum_str = (datetime.now() - timedelta(days=4)).strftime('%d.%m.%Y')
     
     if fokus_datum_str in dani:
         idx_fokus = dani.index(fokus_datum_str)
-        # Pomeramo kolone tako da 17.09. izbije odmah na početak posle ID mašine
         poredjane_kolone = osnovne_kolone + dani[idx_fokus:] + dani[:idx_fokus]
     else:
         poredjane_kolone = osnovne_kolone + dani
@@ -124,11 +131,14 @@ def prikazi_raspored(fajl_baze):
         else:
             konfiguracija_kolona[col] = st.column_config.TextColumn(col)
 
+    # Čistimo sve preostale NaN i praznine u celoj tabeli pre nego što je ispišemo
+    df = df.fillna('')
+
     st.data_editor(
         df,
         use_container_width=True,
         column_order=poredjane_kolone,
         column_config=konfiguracija_kolona,
         disabled=True,
-        key="editor_troslojnog_rasporeda_skraceni_mirni"
+        key="editor_troslojnog_rasporeda_skraceni_mirni_final"
     )
