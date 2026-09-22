@@ -101,16 +101,18 @@ def prikazi_raspored(fajl_baze):
         except:
             pass
 
-    # 🎯 FIKSIRAN STROGI HRONOLOŠKI REDOSLED: Datumi idu tačno onako kako ih je matematika sortirala
+    # 🎯 STROGO FILTRIRANJE I REĐANJE: Ručno sortiramo spisak dana hronološki
+    hronoloski_dani = sorted(list(dani), key=lambda x: datetime.strptime(x, '%d.%m.%Y'))
+    
     osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
-    poredjane_kolone = osnovne_kolone + dani
+    poredjane_kolone = osnovne_kolone + hronoloski_dani
 
     konfiguracija_kolona = {
         "MAŠINA": st.column_config.TextColumn("MAŠINA", pinned=True, disabled=True),
         "ID MAŠINE": st.column_config.TextColumn("ID MAŠINE", pinned=True, disabled=True)
     }
     
-    for col in dani:
+    for col in hronoloski_dani:
         if col == danasnji_str:
             konfiguracija_kolona[col] = st.column_config.TextColumn(f"🚨 {col} (DANAS) 🚨")
         else:
@@ -118,11 +120,12 @@ def prikazi_raspored(fajl_baze):
 
     df = df.fillna('')
 
+    # 🚀 MENJAMO KLJUČ NA v6 KOJI PRISILNO BRIŠE STARI REDOSLED IZ BRAUZERA
     st.data_editor(
         df,
         use_container_width=True,
         column_order=poredjane_kolone,
         column_config=konfiguracija_kolona,
         disabled=True,
-        key="editor_troslojnog_rasporeda_skraceni_mirni_final_v5"
+        key="editor_troslojnog_rasporeda_skraceni_mirni_final_v6"
     )
