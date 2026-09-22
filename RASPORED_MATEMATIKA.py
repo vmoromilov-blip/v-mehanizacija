@@ -1,6 +1,8 @@
 import pandas as pd
 import os
 from datetime import datetime, timedelta
+# Ponovo uvozimo tvoj moćni motor koji računa smene A i B kroz dane!
+from nosioci import izracunaj_aktivnog_nosioca
 
 def izracunaj_troslojni_raspored(fajl_baze):
     # 1. Pravimo prozor od TAČNO 10 operativnih dana (5 unazad, danas, 4 unapred)
@@ -32,34 +34,23 @@ def izracunaj_troslojni_raspored(fajl_baze):
     for dan in dani:
         df_final[dan] = ""
 
-    # --- SLOJ 1: Povlačenje redovnih nosilaca iz nove upeglane baze ---
-    if os.path.exists('nosioci_baza.csv'):
-        try:
-            df_n = pd.read_csv('nosioci_baza.csv')
-            df_n.columns = [c.upper().strip() for c in df_n.columns]
-            df_n['ID MAŠINE'] = df_n['ID MAŠINE'].astype(str).str.strip().str.upper()
-            
-            for idx, red in df_final.iterrows():
-                m_id = str(red['ID MAŠINE']).strip().upper()
-                redovni = df_n[df_n['ID MAŠINE'] == m_id]
-                if not redovni.empty:
-                    ime_radnika = str(redovni.iloc[-1]['NOSILAC']).upper().strip()
-                    if ime_radnika != "NAN" and ime_radnika != "":
-                        for dan in dani:
-                            df_final.at[idx, dan] = ime_radnika
-        except:
-            pass
+    # --- 🎯 SLOJ 1: UPALJEN MOTOR ZA TURNUSE (Računa ritam rada za SVAKI DAN pojedinačno!) ---
+    for dan in dani:
+        # Pozivamo funkciju koja preračunava ko radi na taj tačan dan
+        nosioci_za_dan = izracunaj_aktivnog_nosioca(fajl_baze, dan)
+        for idx, red in df_final.iterrows():
+            m_id = str(red['ID MAŠINE']).strip().upper()
+            if m_id in nosioci_za_dan:
+                df_final.at[idx, dan] = str(nosioci_za_dan[m_id]).upper().strip()
 
-    # --- 🎯 SLOJ 2: POPRAVLJENI FILTER ISPRVNOSTI (Čisti ćeliju ako je NE, MIR ili VIK) ---
+    # --- SLOJ 2: Filter ispravnosti (Brišemo vozača ako je mašina NE, MIR ili VIK) ---
     if os.path.exists('ispravnost_baza.csv'):
         try:
             df_isp = pd.read_csv('ispravnost_baza.csv')
-            # Čistimo i osiguravamo nazive kolona i ID mašina
             df_isp.columns = [str(c).strip() for c in df_isp.columns]
             df_isp['ID MAŠINE'] = df_isp['ID MAŠINE'].astype(str).str.strip().str.upper()
             
             for dan in dani:
-                # Tražimo kolonu u ispravnosti koja odgovara našem datumu
                 kolona_ispravnosti = [c for c in df_isp.columns if c == dan]
                 if kolona_ispravnosti:
                     c_dan = kolona_ispravnosti[0]
@@ -68,7 +59,6 @@ def izracunaj_troslojni_raspored(fajl_baze):
                         status_red = df_isp[df_isp['ID MAŠINE'] == m_id]
                         if not status_red.empty:
                             trenutni_status = str(status_red[c_dan].values[0]).strip().upper()
-                            # Ako osetimo bilo šta osim aktivnog rada, momentalno brišemo vozača!
                             if trenutni_status in ['NE', 'MIR', 'VIK']:
                                 df_final.at[idx, dan] = ""
         except:
