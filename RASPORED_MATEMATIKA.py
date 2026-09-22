@@ -32,7 +32,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
     for dan in dani:
         df_final[dan] = ""
 
-    # 🎯 SLOJ 1: Munjevito povlačenje redovnih nosilaca direktno iz nove upeglane baze
+    # SLOJ 1: Munjevito povlačenje redovnih nosilaca direktno iz nove upeglane baze
     if os.path.exists('nosioci_baza.csv'):
         try:
             df_n = pd.read_csv('nosioci_baza.csv')
@@ -62,13 +62,13 @@ def izracunaj_troslojni_raspored(fajl_baze):
                         m_id = str(red['ID MAŠINE']).strip().upper()
                         status_red = df_isp[df_isp['ID MAŠINE'] == m_id]
                         if not status_red.empty:
-                            trenutni_status = str(status_red[dan].values[0]).strip().upper()
+                            trenutni_status = str(status_red[dan].values).strip().upper()
                             if trenutni_status in ['NE', 'MIR', 'VIK']:
                                 df_final.at[idx, dan] = ""
         except:
             pass
 
-    # SLOJ 3: Vojna naredba iz Zamena (Prebrisavanje ćelija realnim stanjem na terenu)
+    # SLOJ 3: Vojna naredba iz Zamena (Prebrisavanje cells realnim stanjem na terenu)
     if os.path.exists('zamena.csv'):
         try:
             df_zam = pd.read_csv('zamena.csv')
