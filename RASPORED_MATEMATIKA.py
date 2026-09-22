@@ -34,13 +34,12 @@ def izracunaj_troslojni_raspored(fajl_baze):
     for dan in dani:
         df_final[dan] = ""
 
-    # --- 🎯 SLOJ 1: POPRAVLJEN TURNUS MOTOR (Korigovan kalendarski prozor za +1 dan) ---
+    # --- 🎯 SLOJ 1: POPRAVLJEN TURNUS MOTOR (Oduzimamo 1 dan za savršeno poravnanje udesno) ---
     for dan in dani:
-        # Pretvaramo u datum, dodajemo 1 dan da poništimo fabričko kašnjenje formule, pa vraćamo u tekst
         dt_dan = datetime.strptime(dan, '%d.%m.%Y')
-        korigovan_dan_str = (dt_dan + timedelta(days=1)).strftime('%d.%m.%Y')
+        # Menjamo smer: idemo minus jedan dan unazad da vratimo ritam na fabričko mesto!
+        korigovan_dan_str = (dt_dan - timedelta(days=1)).strftime('%d.%m.%Y')
         
-        # Pozivamo funkciju sa upeglanim datumom i dobijamo bezgrešan ritam smena!
         nosioci_za_dan = izracunaj_aktivnog_nosioca(fajl_baze, korigovan_dan_str)
         for idx, red in df_final.iterrows():
             m_id = str(red['ID MAŠINE']).strip().upper()
@@ -68,7 +67,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
         except:
             pass
 
-    # --- SLOJ 3: Vojna naredba iz Zamena (Precizno sečenje u dan!) ---
+    # --- SLOJ 3: Vojna naredba iz Zamena (Strogo sečenje u milimetar bez prelivanja) ---
     if os.path.exists('zamena.csv'):
         try:
             df_zam = pd.read_csv('zamena.csv')
@@ -84,6 +83,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
                         p_dt = datetime.strptime(p_str, '%Y-%m-%d') if '-' in p_str else datetime.strptime(p_str, '%d.%m.%Y')
                         z_dt = datetime.strptime(z_str, '%Y-%m-%d') if '-' in z_str else datetime.strptime(z_str, '%d.%m.%Y')
                         
+                        # Zamena važi ISKLJUČIVO unutar zadatog opsega
                         if p_dt.date() <= trenutni_dt.date() <= z_dt.date():
                             m_id = str(zam_red['ID MAŠINE']).strip().upper()
                             idx_m = df_final[df_final['ID MAŠINE'] == m_id].index
