@@ -3,7 +3,7 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# UVOZIMO NAŠE NOVE KRUPNE PODFASCIKLE VELIKIM SLOVIMA
+# 🎯 SIGURNI UVOZI: Vežemo se isključivo za naše nove, upeglane fajlove VELIKIM SLOVIMA
 from GARAŽNA_BAZA import prikazi_garazu
 from POSADA_BAZA import prikazi_posadu
 from ZAMENA_BAZA import prikazi_zamenu
