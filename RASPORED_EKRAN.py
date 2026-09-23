@@ -3,7 +3,7 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# UVOZIMO ČISTU I SAMOSTALNU TROSLOJNU MATEMATIKU IZ POZADINE
+# UVOZIMO SAMOSTALNU TROSLOJNU MATEMATIKU
 from RASPORED_MATEMATIKA import izracunaj_troslojni_raspored
 
 def prikazi_raspored(fajl_baze):
@@ -30,26 +30,24 @@ def prikazi_raspored(fajl_baze):
     fajl_starog_unosa = "raspored_zivi_unos.csv"
     danasnji_str = datetime.now().strftime('%d.%m.%Y')
     
-    # 🚀 REVOLUCIONARNO ISPIRANJE: Brišemo stare fajlove da ne vuku reč "NEMA" i stare sudare kolona
+    # Prisilno čistimo stare probne unose iz privremene memorije
     if os.path.exists(fajl_starog_unosa):
         try:
             os.remove(fajl_starog_unosa)
         except:
             pass
             
-    # Računamo osnovni troslojni raspored iz pozadinske matematike (Samo 10 dana!)
+    # Računamo raspored iz pročišćene pozadinske matematike
     df, dani = izracunaj_troslojni_raspored(fajl_baze)
     
     if df is None or not isinstance(df, pd.DataFrame) or df.empty:
         st.error("Podaci za raspored nisu uspešno učitani iz baze.")
         return
 
-    # Inicijalizujemo čist fajl za ručne korekcije
     if not os.path.exists(fajl_rucnih_promena) or os.path.getsize(fajl_rucnih_promena) == 0:
         df_prazan = pd.DataFrame(columns=['ID MAŠINE', 'DATUM', 'NOVI VOZAČ'])
         df_prazan.to_csv(fajl_rucnih_promena, index=False)
 
-    # Učitavamo spiskove vozača i mašina za čiste padajuće menije na vrhu
     opcije_radnika = [""]
     if os.path.exists('POSADA_BAZA.csv'):
         try:
@@ -68,13 +66,12 @@ def prikazi_raspored(fajl_baze):
         except:
             pass
 
-    # --- KONTROLNA TABLA: Krupno dugme sa grafičkim kalendarom na vrhu ekrana ---
     with st.popover("📅 KORIGUJ RASPORED"):
         st.write("### Unesi brzu operativnu izmenu vozača")
         k_id = st.selectbox("Izaberi garažni broj mašine:", opcije_masina, key="kor_id")
         k_datum_izbor = st.date_input("Izaberi datum za korekciju:", datetime.now().date(), key="kor_dat")
         k_dan = k_datum_izbor.strftime('%d.%m.%Y')
-        k_radnik = st.selectbox("Izaberi novog vozača (Padajući meni):", opcije_radnika, key="kor_rad")
+        k_radnik = st.selectbox("Izaberi novog vozača:", opcije_radnika, key="kor_rad")
         
         if st.button("SAČUVAJ IZMENU", key="kor_btn"):
             if k_id and k_dan:
@@ -92,7 +89,6 @@ def prikazi_raspored(fajl_baze):
 
     st.write("")
 
-    # Primenjujemo sačuvane ručne korekcije preko osnovnog rasporeda
     if os.path.exists(fajl_rucnih_promena):
         try:
             df_promene = pd.read_csv(fajl_rucnih_promena)
@@ -108,9 +104,7 @@ def prikazi_raspored(fajl_baze):
         except:
             pass
 
-    # Ručno sortiramo spisak dana hronološki s leva na desno
     hronoloski_dani = sorted(list(dani), key=lambda x: datetime.strptime(x, '%d.%m.%Y'))
-    
     osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
     poredjane_kolone = osnovne_kolone + hronoloski_dani
 
@@ -127,12 +121,12 @@ def prikazi_raspored(fajl_baze):
 
     df = df.fillna('')
 
-    # 🚀 ZAKLJUČAN KLJUČ v8 ZA POTPUNI RESET PRIVREMENE MEMORIJE TABELE
+    # 🚀 ZAKLJUČAN KLJUČ v9 ZA PRISILNI RESET PRIVREMENE MEMORIJE TABELE
     st.data_editor(
         df,
         use_container_width=True,
         column_order=poredjane_kolone,
         column_config=konfiguracija_kolona,
         disabled=True,
-        key="editor_troslojnog_rasporeda_skraceni_mirni_final_v8"
+        key="editor_troslojnog_rasporeda_skraceni_mirni_final_v9"
     )
