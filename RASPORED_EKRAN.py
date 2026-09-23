@@ -3,7 +3,7 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# UVOZIMO TROSLOJNU MATEMATIKU U POZADINI (NOSIOCI + ISPRAVNOST + ZAMENA)
+# UVOZIMO ČISTU I SAMOSTALNU TROSLOJNU MATEMATIKU IZ POZADINE
 from RASPORED_MATEMATIKA import izracunaj_troslojni_raspored
 
 def prikazi_raspored(fajl_baze):
@@ -30,6 +30,13 @@ def prikazi_raspored(fajl_baze):
     fajl_starog_unosa = "raspored_zivi_unos.csv"
     danasnji_str = datetime.now().strftime('%d.%m.%Y')
     
+    # 🚀 REVOLUCIONARNO ISPIRANJE: Brišemo stare fajlove da ne vuku reč "NEMA" i stare sudare kolona
+    if os.path.exists(fajl_starog_unosa):
+        try:
+            os.remove(fajl_starog_unosa)
+        except:
+            pass
+            
     # Računamo osnovni troslojni raspored iz pozadinske matematike (Samo 10 dana!)
     df, dani = izracunaj_troslojni_raspored(fajl_baze)
     
@@ -37,7 +44,7 @@ def prikazi_raspored(fajl_baze):
         st.error("Podaci za raspored nisu uspešno učitani iz baze.")
         return
 
-    # Ponovo inicijalizujemo čist fajl za ručne korekcije
+    # Inicijalizujemo čist fajl za ručne korekcije
     if not os.path.exists(fajl_rucnih_promena) or os.path.getsize(fajl_rucnih_promena) == 0:
         df_prazan = pd.DataFrame(columns=['ID MAŠINE', 'DATUM', 'NOVI VOZAČ'])
         df_prazan.to_csv(fajl_rucnih_promena, index=False)
@@ -101,7 +108,7 @@ def prikazi_raspored(fajl_baze):
         except:
             pass
 
-    # 🎯 STROGO FILTRIRANJE I REĐANJE: Ručno sortiramo spisak dana hronološki
+    # Ručno sortiramo spisak dana hronološki s leva na desno
     hronoloski_dani = sorted(list(dani), key=lambda x: datetime.strptime(x, '%d.%m.%Y'))
     
     osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
@@ -120,12 +127,12 @@ def prikazi_raspored(fajl_baze):
 
     df = df.fillna('')
 
-    # 🚀 MENJAMO KLJUČ NA v6 KOJI PRISILNO BRIŠE STARI REDOSLED IZ BRAUZERA
+    # 🚀 ZAKLJUČAN KLJUČ v8 ZA POTPUNI RESET PRIVREMENE MEMORIJE TABELE
     st.data_editor(
         df,
         use_container_width=True,
         column_order=poredjane_kolone,
         column_config=konfiguracija_kolona,
         disabled=True,
-        key="editor_troslojnog_rasporeda_skraceni_mirni_final_v6"
+        key="editor_troslojnog_rasporeda_skraceni_mirni_final_v8"
     )
