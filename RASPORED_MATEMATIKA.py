@@ -1,8 +1,27 @@
 import pandas as pd
 import os
 from datetime import datetime, timedelta
-# UVOZIMO NAŠU NOVU ČISTU FIOKU ZA SMENE A I B
-from RASPORED_TURNUS import izracunaj_smenski_turnus
+
+def izracunaj_smenski_turnus(start_str, turnus_tip, smena, trenutni_dt):
+    try:
+        start_dt = datetime.strptime(str(start_str).strip(), '%d.%m.%Y').date()
+        if trenutni_dt >= start_dt:
+            razlika_dana = (trenutni_dt - start_dt).days
+            
+            # Ako je turnus 1 - čovek vozi mašinu svaki dan bez pauze
+            if str(turnus_tip).strip() == '1':
+                return True
+                
+            # Ako je turnus 5 - ritam 5 dana rada, 5 dana odmora
+            elif str(turnus_tip).strip() == '5':
+                ciklus = razlika_dana % 10
+                if str(smena).strip().upper() == 'A':
+                    return 0 <= ciklus < 5
+                elif str(smena).strip().upper() == 'B':
+                    return 5 <= ciklus < 10
+    except:
+        pass
+    return False
 
 def izracunaj_troslojni_raspored(fajl_baze):
     # 1. Pravimo prozor od TAČNO 10 operativnih dana (5 unazad, danas, 4 unapred)
@@ -14,7 +33,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
     dani_dt.sort()
     dani = [d.strftime('%d.%m.%Y') for d in dani_dt]
         
-    # 2. Čitamo osnovnu strukturu mašina iz Garaže
+    # 2. Brzo čitanje osnovne strukture mašina iz Garaže
     if os.path.exists('GARAZA_BAZA.csv'):
         try:
             df_g = pd.read_csv('GARAZA_BAZA.csv')
@@ -32,7 +51,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
     for dan in dani:
         df_final[dan] = ""
 
-    # --- SLOJ 1: NOVI TURNUS MOTOR IZ SVOJE POSEBNE FIOKE ---
+    # --- SLOJ 1: SAMOSTALNI TURNUS MOTOR (Ritam 5-5 u milimetar) ---
     if os.path.exists('nosioci_baza.csv'):
         try:
             df_n = pd.read_csv('nosioci_baza.csv')
@@ -52,7 +71,6 @@ def izracunaj_troslojni_raspored(fajl_baze):
                         ime_vozača = str(n_red['NOSILAC']).strip().upper()
                         turnus_tip = str(n_red['TIP TURNUSA']).strip()
                         
-                        # Pozivamo izdvojenu matematiku turnusa
                         if izracunaj_smenski_turnus(start_str, turnus_tip, smena, trenutni_dt):
                             df_final.at[idx, dan] = ime_vozača
         except:
@@ -79,7 +97,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
         except:
             pass
 
-    # --- SLOJ 3: Vojna naredba iz Zamena (Strogo sečenje u dan prema opsegu) ---
+    # --- SLOJ 3: Vojna naredba iz Zamena (Strogo sečenje u dan) ---
     if os.path.exists('zamena.csv'):
         try:
             df_zam = pd.read_csv('zamena.csv')
