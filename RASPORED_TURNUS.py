@@ -2,6 +2,7 @@ from datetime import datetime
 
 def izracunaj_smenski_turnus(start_str, turnus_tip, smena, trenutni_dt):
     try:
+        # Pretvaramo tekstualni startni datum iz Nosioca u pravi datum za matematiku
         start_dt = datetime.strptime(str(start_str).strip(), '%d.%m.%Y').date()
         if trenutni_dt >= start_dt:
             razlika_dana = (trenutni_dt - start_dt).days
@@ -15,12 +16,10 @@ def izracunaj_smenski_turnus(start_str, turnus_tip, smena, trenutni_dt):
                 ciklus = razlika_dana % 10
                 if str(smena).strip().upper() == 'A':
                     # Smena A radi prvih 5 dana (od 0 do 4)
-                    if 0 <= ciklus < 5:
-                        return True
+                    return 0 <= ciklus < 5
                 elif str(smena).strip().upper() == 'B':
                     # Smena B radi drugih 5 dana (od 5 do 9)
-                    if 5 <= ciklus < 10:
-                        return True
+                    return 5 <= ciklus < 10
     except:
         pass
     return False
