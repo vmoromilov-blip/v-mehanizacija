@@ -1,6 +1,8 @@
 import pandas as pd
 import os
 from datetime import datetime, timedelta
+# UVOZIMO NAŠU NOVU ČISTU FIOKU ZA SMENE A I B
+from RASPORED_TURNUS import izracunaj_smenski_turnus
 
 def izracunaj_troslojni_raspored(fajl_baze):
     # 1. Pravimo prozor od TAČNO 10 operativnih dana (5 unazad, danas, 4 unapred)
@@ -12,7 +14,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
     dani_dt.sort()
     dani = [d.strftime('%d.%m.%Y') for d in dani_dt]
         
-    # 2. Brzo čitanje osnovne strukture mašina iz Garaže
+    # 2. Čitamo osnovnu strukturu mašina iz Garaže
     if os.path.exists('GARAZA_BAZA.csv'):
         try:
             df_g = pd.read_csv('GARAZA_BAZA.csv')
@@ -30,7 +32,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
     for dan in dani:
         df_final[dan] = ""
 
-    # --- 🎯 SLOJ 1: NOVI SAMOSTALNI TURNUS MOTOR (RITAM 5 RADI - 5 LADI ZA SVAKI DAN) ---
+    # --- SLOJ 1: NOVI TURNUS MOTOR IZ SVOJE POSEBNE FIOKE ---
     if os.path.exists('nosioci_baza.csv'):
         try:
             df_n = pd.read_csv('nosioci_baza.csv')
@@ -42,7 +44,6 @@ def izracunaj_troslojni_raspored(fajl_baze):
                 
                 for idx, red in df_final.iterrows():
                     m_id = str(red['ID MAŠINE']).strip().upper()
-                    # Tražimo sve nosioce zavedene za ovu konkretnu mašinu
                     masina_nosioci = df_n[df_n['ID MAŠINE'] == m_id]
                     
                     for _, n_red in masina_nosioci.iterrows():
@@ -51,29 +52,9 @@ def izracunaj_troslojni_raspored(fajl_baze):
                         ime_vozača = str(n_red['NOSILAC']).strip().upper()
                         turnus_tip = str(n_red['TIP TURNUSA']).strip()
                         
-                        try:
-                            start_dt = datetime.strptime(start_str, '%d.%m.%Y').date()
-                            if trenutni_dt >= start_dt:
-                                razlika_dana = (trenutni_dt - start_dt).days
-                                
-                                # Ako je turnus 1 - čovek radi svaki dan bez pauze (Nosioci)
-                                if turnus_tip == '1':
-                                    df_final.at[idx, dan] = ime_vozača
-                                
-                                # Ako je turnus 5 - računamo ritam 5 dana rada, 5 dana odmora
-                                elif turnus_tip == '5':
-                                    ciklus = razlika_dana % 10
-                                    
-                                    if smena == 'A':
-                                        # Smena A radi prvih 5 dana u ciklusu od 10 dana
-                                        if 0 <= ciklus < 5:
-                                            df_final.at[idx, dan] = ime_vozača
-                                    elif smena == 'B':
-                                        # Smena B radi drugih 5 dana u ciklusu od 10 dana
-                                        if 5 <= ciklus < 10:
-                                            df_final.at[idx, dan] = ime_vozača
-                        except:
-                            pass
+                        # Pozivamo izdvojenu matematiku turnusa
+                        if izracunaj_smenski_turnus(start_str, turnus_tip, smena, trenutni_dt):
+                            df_final.at[idx, dan] = ime_vozača
         except:
             pass
 
@@ -98,7 +79,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
         except:
             pass
 
-    # --- SLOJ 3: Vojna naredba iz Zamena (Strogo sečenje u dan prema zadatom opsegu) ---
+    # --- SLOJ 3: Vojna naredba iz Zamena (Strogo sečenje u dan prema opsegu) ---
     if os.path.exists('zamena.csv'):
         try:
             df_zam = pd.read_csv('zamena.csv')
