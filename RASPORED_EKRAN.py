@@ -3,7 +3,7 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# UVOZIMO PROČIŠĆENU TROSLOJNU MATEMATIKU IZ DRUGE FIOKE
+# UVOZIMO NAŠU PROČIŠĆENU I RAZBIJENU POZADINSKU MATEMATIKU
 from RASPORED_MATEMATIKA import izracunaj_troslojni_raspored
 
 def prikazi_raspored(fajl_baze):
@@ -30,14 +30,14 @@ def prikazi_raspored(fajl_baze):
     fajl_starog_unosa = "raspored_zivi_unos.csv"
     danasnji_str = datetime.now().strftime('%d.%m.%Y')
     
-    # Prisilno brišemo stare privremene datoteke da očistimo ekran
+    # Prisilno brišemo stare privremene datoteke da očistimo ekran od anomalija
     if os.path.exists(fajl_starog_unosa):
         try:
             os.remove(fajl_starog_unosa)
         except:
             pass
             
-    # Računamo raspored iz pročišćene pozadinske matematike
+    # Računamo raspored iz pročišćene pozadinske matematike (Samo 10 dana!)
     df, dani = izracunaj_troslojni_raspored(fajl_baze)
     
     if df is None or not isinstance(df, pd.DataFrame) or df.empty:
@@ -66,7 +66,7 @@ def prikazi_raspored(fajl_baze):
         except:
             pass
 
-    # --- KONTROLNA TABLA: Dugme sa grafičkim kalendarom na vrhu ekrana ---
+    # --- KONTROLNA TABLA: Krupno dugme sa grafičkim kalendarom na vrhu ekrana ---
     with st.popover("📅 KORIGUJ RASPORED"):
         st.write("### Unesi brzu operativnu izmenu vozača")
         k_id = st.selectbox("Izaberi garažni broj mašine:", opcije_masina, key="kor_id")
@@ -105,7 +105,7 @@ def prikazi_raspored(fajl_baze):
         except:
             pass
 
-    # Sortiramo spisak dana hronološki s leva na desno
+    # Strogo i hronološki ređamo spisak dana sleva nadesno
     hronoloski_dani = sorted(list(dani), key=lambda x: datetime.strptime(x, '%d.%m.%Y'))
     osnovne_kolone = ['MAŠINA', 'ID MAŠINE']
     poredjane_kolone = osnovne_kolone + hronoloski_dani
@@ -123,13 +123,12 @@ def prikazi_raspored(fajl_baze):
 
     df = df.fillna('')
 
-    # 🚀 ZAKLJUČAN KLJUČ v10 ZA POTPUNI RESET PRIVREMENE MEMORIJE TABELE
+    # 🚀 MENJAMO KLJUČ NA v11 ZA POTPUNI RESET PRIVREMENE MEMORIJE SERVERA
     st.data_editor(
         df,
         use_container_width=True,
         column_order=poredjane_kolone,
         column_config=konfiguracija_kolona,
         disabled=True,
-        key="editor_troslojnog_rasporeda_skraceni_mirni_final_v10"
+        key="editor_troslojnog_rasporeda_skraceni_mirni_final_v11"
     )
-
