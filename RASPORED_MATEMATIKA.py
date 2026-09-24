@@ -7,10 +7,8 @@ def izracunaj_smenski_turnus(start_str, turnus_tip, smena, trenutni_dt):
         start_dt = datetime.strptime(str(start_str).strip(), '%d.%m.%Y').date()
         if trenutni_dt >= start_dt:
             razlika_dana = (trenutni_dt - start_dt).days
-            
             if str(turnus_tip).strip() == '1':
                 return True
-                
             elif str(turnus_tip).strip() == '5':
                 ciklus = razlika_dana % 10
                 if str(smena).strip().upper() == 'A':
@@ -23,12 +21,10 @@ def izracunaj_smenski_turnus(start_str, turnus_tip, smena, trenutni_dt):
 
 def izracunaj_troslojni_raspored(fajl_baze):
     danas = datetime.now()
-    dani_dt = []
+    dani = []
     for i in range(-5, 5):
-        dani_dt.append(danas + timedelta(days=i))
-        
-    dani_dt.sort()
-    dani = [d.strftime('%d.%m.%Y') for d in dani_dt]
+        tekuci_dan = danas + timedelta(days=i)
+        dani.append(tekuci_dan.strftime('%d.%m.%Y'))
         
     if os.path.exists('GARAZA_BAZA.csv'):
         try:
@@ -47,26 +43,22 @@ def izracunaj_troslojni_raspored(fajl_baze):
     for dan in dani:
         df_final[dan] = ""
 
-    # SLOJ 1: Povlačenje redovnih nosilaca iz nove upeglane baze
+    # SLOJ 1: Turnusi iz baze nosilaca
     if os.path.exists('nosioci_baza.csv'):
         try:
             df_n = pd.read_csv('nosioci_baza.csv')
             df_n.columns = [c.upper().strip() for c in df_n.columns]
             df_n['ID MAŠINE'] = df_n['ID MAŠINE'].astype(str).str.strip().str.upper()
-            
             for dan in dani:
                 trenutni_dt = datetime.strptime(dan, '%d.%m.%Y').date()
-                
                 for idx, red in df_final.iterrows():
                     m_id = str(red['ID MAŠINE']).strip().upper()
                     masina_nosioci = df_n[df_n['ID MAŠINE'] == m_id]
-                    
                     for _, n_red in masina_nosioci.iterrows():
                         start_str = str(n_red['START DATUM']).strip()
                         smena = str(n_red['SMENA']).strip().upper()
                         ime_vozača = str(n_red['NOSILAC']).strip().upper()
                         turnus_tip = str(n_red['TIP TURNUSA']).strip()
-                        
                         if izracunaj_smenski_turnus(start_str, turnus_tip, smena, trenutni_dt):
                             df_final.at[idx, dan] = ime_vozača
         except:
@@ -78,37 +70,31 @@ def izracunaj_troslojni_raspored(fajl_baze):
             df_isp = pd.read_csv('ispravnost_baza.csv')
             df_isp.columns = [str(c).strip() for c in df_isp.columns]
             df_isp['ID MAŠINE'] = df_isp['ID MAŠINE'].astype(str).str.strip().str.upper()
-            
             for dan in dani:
-                kolona_ispravnosti = [c for c in df_isp.columns if c == dan]
-                if kolona_ispravnosti:
-                    c_dan = kolona_ispravnosti
+                if dan in df_isp.columns:
                     for idx, red in df_final.iterrows():
                         m_id = str(red['ID MAŠINE']).strip().upper()
                         status_red = df_isp[df_isp['ID MAŠINE'] == m_id]
                         if not status_red.empty:
-                            trenutni_status = str(status_red[c_dan].values).strip().upper()
+                            trenutni_status = str(status_red[dan].values[0]).strip().upper()
                             if trenutni_status in ['NE', 'MIR', 'VIK']:
                                 df_final.at[idx, dan] = ""
         except:
             pass
 
-    # SLOJ 3: Vojna naredba iz Zamena
+    # SLOJ 3: Zamene u dan
     if os.path.exists('zamena.csv'):
         try:
             df_zam = pd.read_csv('zamena.csv')
             df_zam.columns = [c.upper().strip() for c in df_zam.columns]
-            
             for dan in dani:
                 trenutni_dt = datetime.strptime(dan, '%d.%m.%Y')
                 for _, zam_red in df_zam.iterrows():
                     p_str = str(zam_red['DATUM POČETKA']).strip()
                     z_str = str(zam_red['DATUM ZAVRŠETKA']).strip()
-                    
                     try:
                         p_dt = datetime.strptime(p_str, '%Y-%m-%d') if '-' in p_str else datetime.strptime(p_str, '%d.%m.%Y')
                         z_dt = datetime.strptime(z_str, '%Y-%m-%d') if '-' in z_str else datetime.strptime(z_str, '%d.%m.%Y')
-                        
                         if p_dt.date() <= trenutni_dt.date() <= z_dt.date():
                             m_id = str(zam_red['ID MAŠINE']).strip().upper()
                             idx_m = df_final[df_final['ID MAŠINE'] == m_id].index
