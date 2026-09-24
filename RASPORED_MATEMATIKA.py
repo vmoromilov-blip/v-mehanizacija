@@ -2,13 +2,26 @@ import pandas as pd
 import os
 from datetime import datetime, timedelta
 
-# UVOZIMO SVA TRI NAŠA NOVA PROČIŠĆENA SLOJA OD JUČE I DANAS
-from RASPORED_SLOJ1 import povuci_redovne_turnuse
-from RASPORED_SLOJ2 import primeni_filter_ispravnosti
-from RASPORED_SLOJ3 import primeni_vojne_zamene
+def izracunaj_smenski_turnus(start_str, turnus_tip, smena, trenutni_dt):
+    try:
+        start_dt = datetime.strptime(str(start_str).strip(), '%d.%m.%Y').date()
+        if trenutni_dt >= start_dt:
+            razlika_dana = (trenutni_dt - start_dt).days
+            
+            if str(turnus_tip).strip() == '1':
+                return True
+                
+            elif str(turnus_tip).strip() == '5':
+                ciklus = razlika_dana % 10
+                if str(smena).strip().upper() == 'A':
+                    return 0 <= ciklus < 5
+                elif str(smena).strip().upper() == 'B':
+                    return 5 <= ciklus < 10
+    except:
+        pass
+    return False
 
 def izracunaj_troslojni_raspored(fajl_baze):
-    # 1. Pravimo prozor od TAČNO 10 operativnih dana (5 unazad, danas, 4 unapred)
     danas = datetime.now()
     dani_dt = []
     for i in range(-5, 5):
@@ -17,7 +30,6 @@ def izracunaj_troslojni_raspored(fajl_baze):
     dani_dt.sort()
     dani = [d.strftime('%d.%m.%Y') for d in dani_dt]
         
-    # 2. Brzo čitanje osnovne strukture mašina iz Garaže
     if os.path.exists('GARAZA_BAZA.csv'):
         try:
             df_g = pd.read_csv('GARAZA_BAZA.csv')
@@ -35,9 +47,76 @@ def izracunaj_troslojni_raspored(fajl_baze):
     for dan in dani:
         df_final[dan] = ""
 
-    # 🚀 VOJNIČKI LANAC: Puštamo slojeve da rade tačno tvojim redosledom
-    df_final = povuci_redovne_turnuse(df_final, dani)      # SLOJ 1: Turnusi 5-5
-    df_final = primeni_filter_ispravnosti(df_final, dani)  # SLOJ 2: Mirovanje i kvarovi
-    df_final = primeni_vojne_zamene(df_final, dani)        # SLOJ 3: Zamene u dan
+    # SLOJ 1: Povlačenje redovnih nosilaca iz nove upeglane baze
+    if os.path.exists('nosioci_baza.csv'):
+        try:
+            df_n = pd.read_csv('nosioci_baza.csv')
+            df_n.columns = [c.upper().strip() for c in df_n.columns]
+            df_n['ID MAŠINE'] = df_n['ID MAŠINE'].astype(str).str.strip().str.upper()
+            
+            for dan in dani:
+                trenutni_dt = datetime.strptime(dan, '%d.%m.%Y').date()
+                
+                for idx, red in df_final.iterrows():
+                    m_id = str(red['ID MAŠINE']).strip().upper()
+                    masina_nosioci = df_n[df_n['ID MAŠINE'] == m_id]
+                    
+                    for _, n_red in masina_nosioci.iterrows():
+                        start_str = str(n_red['START DATUM']).strip()
+                        smena = str(n_red['SMENA']).strip().upper()
+                        ime_vozača = str(n_red['NOSILAC']).strip().upper()
+                        turnus_tip = str(n_red['TIP TURNUSA']).strip()
+                        
+                        if izracunaj_smenski_turnus(start_str, turnus_tip, smena, trenutni_dt):
+                            df_final.at[idx, dan] = ime_vozača
+        except:
+            pass
+
+    # SLOJ 2: Filter ispravnosti
+    if os.path.exists('ispravnost_baza.csv'):
+        try:
+            df_isp = pd.read_csv('ispravnost_baza.csv')
+            df_isp.columns = [str(c).strip() for c in df_isp.columns]
+            df_isp['ID MAŠINE'] = df_isp['ID MAŠINE'].astype(str).str.strip().str.upper()
+            
+            for dan in dani:
+                kolona_ispravnosti = [c for c in df_isp.columns if c == dan]
+                if kolona_ispravnosti:
+                    c_dan = kolona_ispravnosti
+                    for idx, red in df_final.iterrows():
+                        m_id = str(red['ID MAŠINE']).strip().upper()
+                        status_red = df_isp[df_isp['ID MAŠINE'] == m_id]
+                        if not status_red.empty:
+                            trenutni_status = str(status_red[c_dan].values).strip().upper()
+                            if trenutni_status in ['NE', 'MIR', 'VIK']:
+                                df_final.at[idx, dan] = ""
+        except:
+            pass
+
+    # SLOJ 3: Vojna naredba iz Zamena
+    if os.path.exists('zamena.csv'):
+        try:
+            df_zam = pd.read_csv('zamena.csv')
+            df_zam.columns = [c.upper().strip() for c in df_zam.columns]
+            
+            for dan in dani:
+                trenutni_dt = datetime.strptime(dan, '%d.%m.%Y')
+                for _, zam_red in df_zam.iterrows():
+                    p_str = str(zam_red['DATUM POČETKA']).strip()
+                    z_str = str(zam_red['DATUM ZAVRŠETKA']).strip()
+                    
+                    try:
+                        p_dt = datetime.strptime(p_str, '%Y-%m-%d') if '-' in p_str else datetime.strptime(p_str, '%d.%m.%Y')
+                        z_dt = datetime.strptime(z_str, '%Y-%m-%d') if '-' in z_str else datetime.strptime(z_str, '%d.%m.%Y')
+                        
+                        if p_dt.date() <= trenutni_dt.date() <= z_dt.date():
+                            m_id = str(zam_red['ID MAŠINE']).strip().upper()
+                            idx_m = df_final[df_final['ID MAŠINE'] == m_id].index
+                            if not idx_m.empty:
+                                df_final.loc[idx_m, dan] = str(zam_red['ZAMENA']).upper().strip()
+                    except:
+                        pass
+        except:
+            pass
 
     return df_final.fillna(''), dani
