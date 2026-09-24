@@ -21,10 +21,14 @@ def izracunaj_smenski_turnus(start_str, turnus_tip, smena, trenutni_dt):
 
 def izracunaj_troslojni_raspored(fajl_baze):
     danas = datetime.now()
-    dani = []
-    for i in range(-5, 5):
-        tekuci_dan = danas + timedelta(days=i)
-        dani.append(tekuci_dan.strftime('%d.%m.%Y'))
+    dani_dt = []
+    
+    # 🎯 VOJNIČKI PROZOR: Hvata tačno 3 dana unazad, DANAS, i 5 dana unapred (Ukupno 9 operativnih dana)
+    for i in range(-3, 6):
+        dani_dt.append(danas + timedelta(days=i))
+        
+    dani_dt.sort()
+    dani = [d.strftime('%d.%m.%Y') for d in dani_dt]
         
     if os.path.exists('GARAZA_BAZA.csv'):
         try:
@@ -43,7 +47,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
     for dan in dani:
         df_final[dan] = ""
 
-    # SLOJ 1: Turnusi iz baze nosilaca
+    # SLOJ 1: Okretanje turnusa 5-5 iz baze nosilaca
     if os.path.exists('nosioci_baza.csv'):
         try:
             df_n = pd.read_csv('nosioci_baza.csv')
@@ -64,7 +68,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
         except:
             pass
 
-    # SLOJ 2: Filter ispravnosti
+    # SLOJ 2: Filter ispravnosti (Mirovanja i kvarovi brišu ćeliju)
     if os.path.exists('ispravnost_baza.csv'):
         try:
             df_isp = pd.read_csv('ispravnost_baza.csv')
@@ -76,13 +80,13 @@ def izracunaj_troslojni_raspored(fajl_baze):
                         m_id = str(red['ID MAŠINE']).strip().upper()
                         status_red = df_isp[df_isp['ID MAŠINE'] == m_id]
                         if not status_red.empty:
-                            trenutni_status = str(status_red[dan].values[0]).strip().upper()
+                            trenutni_status = str(status_red[dan].values).strip().upper()
                             if trenutni_status in ['NE', 'MIR', 'VIK']:
                                 df_final.at[idx, dan] = ""
         except:
             pass
 
-    # SLOJ 3: Zamene u dan
+    # SLOJ 3: Vojne naredbe iz Zamena seku u dan
     if os.path.exists('zamena.csv'):
         try:
             df_zam = pd.read_csv('zamena.csv')
