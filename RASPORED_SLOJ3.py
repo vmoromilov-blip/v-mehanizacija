@@ -10,6 +10,9 @@ def primeni_vojne_zamene(df_final, dani):
         df_zam = pd.read_csv('zamena.csv')
         df_zam.columns = [c.upper().strip() for c in df_zam.columns]
         
+        kolona_m = 'ID MAŠINE' if 'ID MAŠINE' in df_zam.columns else df_zam.columns[0]
+        df_zam[kolona_m] = df_zam[kolona_m].astype(str).str.strip().str.upper()
+        
         for dan in dani:
             trenutni_dt = datetime.strptime(dan, '%d.%m.%Y')
             for _, zam_red in df_zam.iterrows():
@@ -20,9 +23,8 @@ def primeni_vojne_zamene(df_final, dani):
                     p_dt = datetime.strptime(p_str, '%Y-%m-%d') if '-' in p_str else datetime.strptime(p_str, '%d.%m.%Y')
                     z_dt = datetime.strptime(z_str, '%Y-%m-%d') if '-' in z_str else datetime.strptime(z_str, '%d.%m.%Y')
                     
-                    # Zamena važi striktno unutar opsega datuma
                     if p_dt.date() <= trenutni_dt.date() <= z_dt.date():
-                        m_id = str(zam_red['ID MAŠINE']).strip().upper()
+                        m_id = str(zam_red[kolona_m]).strip().upper()
                         idx_m = df_final[df_final['ID MAŠINE'] == m_id].index
                         if not idx_m.empty:
                             df_final.loc[idx_m, dan] = str(zam_red['ZAMENA']).upper().strip()
@@ -32,4 +34,3 @@ def primeni_vojne_zamene(df_final, dani):
         pass
         
     return df_final
-
