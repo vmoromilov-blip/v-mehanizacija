@@ -17,44 +17,58 @@ def izracunaj_troslojni_raspored(fajl_baze):
         
     dani_dt.sort()
     dani = [d.strftime('%d.%m.%Y') for d in dani_dt]
-        
-    # Osiguravamo čitanje Garaže da nam ne sruši celi sistem
+    
     df_final = pd.DataFrame()
+    
+    # 🚀 REVOLUCIONARNA ZAŠTITA: Ako fali brzi CSV, čitamo direktno originalni Excel plan!
     if os.path.exists('GARAZA_BAZA.csv'):
         try:
             df_g = pd.read_csv('GARAZA_BAZA.csv')
             df_g.columns = [c.upper().strip() for c in df_g.columns]
-            kolona_gb = 'GARAŽNI BROJ' if 'GARAŽNI BROJ' in df_g.columns else df_g.columns[1] if len(df_g.columns) > 1 else df_g.columns[0]
+            kolona_gb = 'GARAŽNI BROJ' if 'GARAŽNI BROJ' in df_g.columns else df_g.columns[1]
             kolona_tip = 'TIP MAŠINE' if 'TIP MAŠINE' in df_g.columns else df_g.columns[0]
             
             df_final['MAŠINA'] = df_g[kolona_tip].astype(str).str.strip().str.upper()
             df_final['ID MAŠINE'] = df_g[kolona_gb].astype(str).str.strip().str.upper()
-        except Exception as e:
-            print(f"GREŠKA U ČITANJU GARAŽE: {e}")
-            return pd.DataFrame(), dani
-    else:
-        return pd.DataFrame(), dani
+        except:
+            pass
 
+    # Ako je CSV zakazao ili je prazan, vadimo podatke direktno iz živog Excela 'plan.xlsm'
+    if df_final.empty and os.path.exists(fajl_baze):
+        try:
+            df_excel = pd.read_excel(fajl_baze, sheet_name='SPISAK MAŠINA')
+            df_excel.columns = [c.upper().strip() for c in df_excel.columns]
+            kolona_gb = 'GARAŽNI BROJ' if 'GARAŽNI BROJ' in df_excel.columns else df_excel.columns[1]
+            kolona_tip = 'TIP MAŠINE' if 'TIP MAŠINE' in df_excel.columns else df_excel.columns[0]
+            
+            df_final['MAŠINA'] = df_excel[kolona_tip].astype(str).str.strip().str.upper()
+            df_final['ID MAŠINE'] = df_excel[kolona_gb].astype(str).str.strip().str.upper()
+            # Usput pravimo svež CSV da popravimo memoriju servera
+            df_final.to_csv('GARAZA_BAZA.csv', index=False)
+        except:
+            pass
+
+    # Ako nemamo ništa, vraćamo prazno da ne puca sajt
     if df_final.empty:
-        return df_final, dani
+        return pd.DataFrame(), dani
 
     for dan in dani:
         df_final[dan] = ""
 
-    # 🚀 NEPROBOJNI LANAC: Svaki sloj umotavamo u zaštitu da kvar u bazi ne sruši ekran
+    # 🚀 SIGURNI LANAC: Svaki sloj izvršavamo bezbedno
     try:
         df_final = povuci_redovne_turnuse(df_final, dani)      # SLOJ 1
-    except Exception as e:
-        print(f"GREŠKA U SLOJU 1 (TURNUSI): {e}")
+    except:
+        pass
 
     try:
         df_final = primeni_filter_ispravnosti(df_final, dani)  # SLOJ 2
-    except Exception as e:
-        print(f"GREŠKA U SLOJU 2 (ISPRVNOST): {e}")
+    except:
+        pass
 
     try:
         df_final = primeni_vojne_zamene(df_final, dani)        # SLOJ 3
-    except Exception as e:
-        print(f"GREŠKA U SLOJU 3 (ZAMENE): {e}")
+    except:
+        pass
 
     return df_final.fillna(''), dani
