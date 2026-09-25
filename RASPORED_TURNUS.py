@@ -46,4 +46,3 @@ def povuci_redovne_turnuse(df_final, dani):
         pass
         
     return df_final
-
