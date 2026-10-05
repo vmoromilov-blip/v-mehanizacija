@@ -37,8 +37,8 @@ def izracunaj_troslojni_raspored(fajl_baze):
         try:
             df_g = pd.read_csv('GARAZA_BAZA.csv')
             df_g.columns = [c.upper().strip() for c in df_g.columns]
-            kolona_gb = 'GARAŽNI BROJ' if 'GARAŽNI BROJ' in df_g.columns else df_g.columns[0]
-            kolona_tip = 'TIP MAŠINE' if 'TIP MAŠINE' in df_g.columns else df_g.columns[1]
+            kolona_gb = 'GARAŽNI BROJ' if 'GARAŽNI BROJ' in df_g.columns else df_g.columns
+            kolona_tip = 'TIP MAŠINE' if 'TIP MAŠINE' in df_g.columns else df_g.columns
             
             df_final['MAŠINA'] = df_g[kolona_tip].astype(str).str.strip().str.upper()
             df_final['ID MAŠINE'] = df_g[kolona_gb].astype(str).str.strip().str.upper()
@@ -74,24 +74,40 @@ def izracunaj_troslojni_raspored(fajl_baze):
         except:
             pass
 
-    # SLOJ 2: Filter ispravnosti (Mirovanje i kvarovi prazne ćeliju)
+    # SLOJ 2: Filter ispravnosti (Automatsko hvatanje prve ili ključne kolone)
     if os.path.exists('ispravnost_baza.csv'):
         try:
             df_isp = pd.read_csv('ispravnost_baza.csv')
+            izvorni_nazivi = list(df_isp.columns)
             df_isp.columns = [str(c).strip().upper() for c in df_isp.columns]
             
-            # Tražimo kolonu ključa tekstualno bez uzimanja celog niza kolona
-            k_id = 'ID MAŠINE' if 'ID MAŠINE' in df_isp.columns else 'GARAŽNI BROJ' if 'GARAŽNI BROJ' in df_isp.columns else df_isp.columns[0]
+            # Dinamički tražimo kolonu gde su ID-jevi mašina
+            k_id = None
+            for c in df_isp.columns:
+                if c in ['ID MAŠINE', 'GARAŽNI BROJ', 'ID MASINE']:
+                    k_id = c
+                    break
+            # Ako nema eksplicitnog naziva, uzimamo drugu kolonu (gde obično stoji garažni broj)
+            if not k_id:
+                k_id = df_isp.columns[1] if len(df_isp.columns) > 1 else df_isp.columns[0]
+                
             df_isp[k_id] = df_isp[k_id].astype(str).str.strip().str.upper()
             
             for dan in dani:
                 dan_u = dan.upper()
-                if dan_u in df_isp.columns:
+                # Tražimo kolonu koja odgovara datumu bez obzira na velika/mala slova unutar CSV-a
+                kolona_za_proveru = None
+                for originalna_kolona in izvorni_nazivi:
+                    if originalna_kolona.strip() == dan:
+                        kolona_za_proveru = originalna_kolona
+                        break
+                        
+                if kolona_za_proveru:
                     for idx, red in df_final.iterrows():
                         m_id = str(red['ID MAŠINE']).strip().upper()
                         status_red = df_isp[df_isp[k_id] == m_id]
                         if not status_red.empty:
-                            trenutni_status = str(status_red[dan_u].values[0]).strip().upper()
+                            trenutni_status = str(status_red[kolona_za_proveru].values[0]).strip().upper()
                             if trenutni_status in ['NE', 'MIR', 'VIK']:
                                 df_final.at[idx, dan] = ""
         except:
@@ -102,7 +118,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
         try:
             df_zam = pd.read_csv('zamena.csv')
             df_zam.columns = [c.upper().strip() for c in df_zam.columns]
-            kolona_m = 'ID MAŠINE' if 'ID MAŠINE' in df_zam.columns else df_zam.columns[0]
+            kolona_m = 'ID MAŠINE' if 'ID MAŠINE' in df_zam.columns else df_zam.columns
             df_zam[kolona_m] = df_zam[kolona_m].astype(str).str.strip().str.upper()
             
             for dan in dani:
