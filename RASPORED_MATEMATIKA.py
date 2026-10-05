@@ -23,7 +23,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
     danas = datetime.now()
     dani_dt = []
     
-    # 🎯 FIX OPERATIVNI PROZOR: Tačno 3 dana unazad, DANAS, i 5 dana unapred
+    # 🎯 FIKSIRANI OPERATIVNI PROZOR: 3 dana unazad, DANAS, 5 dana unapred
     for i in range(-3, 6):
         dani_dt.append(danas + timedelta(days=i))
         
@@ -37,23 +37,11 @@ def izracunaj_troslojni_raspored(fajl_baze):
         try:
             df_g = pd.read_csv('GARAZA_BAZA.csv')
             df_g.columns = [c.upper().strip() for c in df_g.columns]
-            kolona_gb = 'GARAŽNI BROJ' if 'GARAŽNI BROJ' in df_g.columns else df_g.columns
-            kolona_tip = 'TIP MAŠINE' if 'TIP MAŠINE' in df_g.columns else df_g.columns
+            kolona_gb = 'GARAŽNI BROJ' if 'GARAŽNI BROJ' in df_g.columns else df_g.columns[0]
+            kolona_tip = 'TIP MAŠINE' if 'TIP MAŠINE' in df_g.columns else df_g.columns[1]
             
             df_final['MAŠINA'] = df_g[kolona_tip].astype(str).str.strip().str.upper()
             df_final['ID MAŠINE'] = df_g[kolona_gb].astype(str).str.strip().str.upper()
-        except:
-            pass
-
-    if df_final.empty and os.path.exists(fajl_baze):
-        try:
-            df_excel = pd.read_excel(fajl_baze, sheet_name='SPISAK MAŠINA')
-            df_excel.columns = [c.upper().strip() for c in df_excel.columns]
-            kolona_gb = 'GARAŽNI BROJ' if 'GARAŽNI BROJ' in df_excel.columns else df_excel.columns
-            kolona_tip = 'TIP MAŠINE' if 'TIP MAŠINE' in df_excel.columns else df_excel.columns
-            
-            df_final['MAŠINA'] = df_excel[kolona_tip].astype(str).str.strip().str.upper()
-            df_final['ID MAŠINE'] = df_excel[kolona_gb].astype(str).str.strip().str.upper()
         except:
             pass
 
@@ -63,7 +51,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
     for dan in dani:
         df_final[dan] = ""
 
-    # SLOJ 1: Povlačenje i računanje turnusa 5-5
+    # SLOJ 1: Povlačenje turnusa iz baze nosilaca
     if os.path.exists('nosioci_baza.csv'):
         try:
             df_n = pd.read_csv('nosioci_baza.csv')
@@ -90,25 +78,20 @@ def izracunaj_troslojni_raspored(fajl_baze):
     if os.path.exists('ispravnost_baza.csv'):
         try:
             df_isp = pd.read_csv('ispravnost_baza.csv')
-            df_isp.columns = [str(c).strip() for c in df_isp.columns]
+            df_isp.columns = [str(c).strip().upper() for c in df_isp.columns]
             
-            kolona_id = None
-            for c in df_isp.columns:
-                if c.upper() in ['ID MAŠINE', 'GARAŽNI BROJ', 'ID MASINE']:
-                    kolona_id = c
-                    break
-            if not kolona_id:
-                kolona_id = df_isp.columns
-                
-            df_isp[kolona_id] = df_isp[kolona_id].astype(str).str.strip().str.upper()
+            # Tražimo kolonu ključa tekstualno bez uzimanja celog niza kolona
+            k_id = 'ID MAŠINE' if 'ID MAŠINE' in df_isp.columns else 'GARAŽNI BROJ' if 'GARAŽNI BROJ' in df_isp.columns else df_isp.columns[0]
+            df_isp[k_id] = df_isp[k_id].astype(str).str.strip().str.upper()
             
             for dan in dani:
-                if dan in df_isp.columns:
+                dan_u = dan.upper()
+                if dan_u in df_isp.columns:
                     for idx, red in df_final.iterrows():
                         m_id = str(red['ID MAŠINE']).strip().upper()
-                        status_red = df_isp[df_isp[kolona_id] == m_id]
+                        status_red = df_isp[df_isp[k_id] == m_id]
                         if not status_red.empty:
-                            trenutni_status = str(status_red[dan].values).strip().upper()
+                            trenutni_status = str(status_red[dan_u].values[0]).strip().upper()
                             if trenutni_status in ['NE', 'MIR', 'VIK']:
                                 df_final.at[idx, dan] = ""
         except:
@@ -119,7 +102,7 @@ def izracunaj_troslojni_raspored(fajl_baze):
         try:
             df_zam = pd.read_csv('zamena.csv')
             df_zam.columns = [c.upper().strip() for c in df_zam.columns]
-            kolona_m = 'ID MAŠINE' if 'ID MAŠINE' in df_zam.columns else df_zam.columns
+            kolona_m = 'ID MAŠINE' if 'ID MAŠINE' in df_zam.columns else df_zam.columns[0]
             df_zam[kolona_m] = df_zam[kolona_m].astype(str).str.strip().str.upper()
             
             for dan in dani:
